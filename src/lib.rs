@@ -27,6 +27,7 @@ pub enum SpudTypes {
 }
 
 impl SpudTypes {
+    #[must_use]
     pub fn from_u8(value: u8) -> Option<SpudTypes> {
         match value {
             0x01 => Some(SpudTypes::FieldNameListEnd),

@@ -10,7 +10,11 @@ pub struct SpudDecoder {
 }
 
 impl SpudDecoder {
-    pub fn new(file: Vec<u8>) -> Self {
+    #[must_use]
+    /// # Panics
+    ///
+    /// Panics if the file is not a valid spud file
+    pub fn new(file: &[u8]) -> Self {
         let spud_version: &str = env!("SPUD_VERSION");
 
         let spud_version_bytes: Vec<u8> = spud_version.as_bytes().to_vec();
@@ -18,9 +22,7 @@ impl SpudDecoder {
 
         let (file_version, file_contents): (&[u8], &[u8]) = file.split_at(spud_version_len);
 
-        if file_version != spud_version_bytes {
-            panic!("Invalid spud file");
-        }
+        assert!(file_version == spud_version_bytes, "Invalid spud file");
 
         let mut file_contents: Vec<u8> = file_contents.to_vec();
 
@@ -73,12 +75,19 @@ impl SpudDecoder {
         }
     }
 
+    #[must_use]
+    /// # Panics
+    ///
+    /// Will panic if the path is invalid
     pub fn new_from_path(path: &str) -> Self {
         let file: Vec<u8> = fs::read(path).unwrap();
 
-        Self::new(file)
+        Self::new(&file)
     }
 
+    /// # Panics
+    ///
+    /// Will panic if the index is out of bounds
     fn next(&mut self, steps: usize) -> Result<(), ()> {
         if self.index + steps >= self.file_contents.len() {
             println!("Index out of bounds, decoding failed.");
@@ -110,12 +119,60 @@ impl SpudDecoder {
     }
 
     fn check_end(&self, buffer: usize) -> bool {
-        self.peek(0 + buffer) == Some(0xDE)
+        self.peek(buffer) == Some(0xDE)
             && self.peek(1 + buffer) == Some(0xAD)
             && self.peek(2 + buffer) == Some(0xBE)
             && self.peek(3 + buffer) == Some(0xEF)
     }
 
+    fn read_field_name(&mut self) -> usize {
+        self.next(1).unwrap();
+
+        let field_name_id: u8 = self.file_contents[self.index];
+
+        let field_name: String = self
+            .field_names
+            .iter()
+            .find(|x| x.1 == &field_name_id)
+            .unwrap()
+            .0
+            .clone();
+
+        print!("\"{field_name}\": ");
+
+        1
+    }
+
+    /// # Panics
+    ///
+    /// Will panic on unknown token
+    fn read_variable_length_data(&mut self) -> usize {
+        self.next(1).unwrap();
+
+        let read_byte_value: usize = match self.current_byte {
+            val if val == SpudTypes::U8 as u8 => 1,
+            val if val == SpudTypes::U16 as u8 => 2,
+            val if val == SpudTypes::U32 as u8 => 4,
+            val if val == SpudTypes::U64 as u8 => 8,
+            _ => panic!("Expected: U8, U16, U32, U64, but got an unknown token"),
+        };
+
+        self.next(1).unwrap();
+
+        let read_bytes: Vec<u8> = self.read_bytes(read_byte_value);
+
+        match read_byte_value {
+            1 => u8::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
+            2 => u16::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
+            4 => u32::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
+            8 => usize::try_from(u64::from_le_bytes(read_bytes.try_into().unwrap())).unwrap(),
+            _ => unreachable!(), // Should be caught by the first match
+        }
+    }
+
+    /// # Panics
+    ///
+    /// Will panic on unknown type
     pub fn decode(&mut self) {
         let result: u8 = self.file_contents[self.index];
 
@@ -125,21 +182,7 @@ impl SpudDecoder {
 
         match decode_result {
             Some(SpudTypes::FieldNameId) => {
-                self.next(1).unwrap();
-
-                let field_name_id: u8 = self.file_contents[self.index];
-
-                let field_name: String = self
-                    .field_names
-                    .iter()
-                    .find(|x| x.1 == &field_name_id)
-                    .unwrap()
-                    .0
-                    .clone();
-
-                print!("\"{}\": ", field_name);
-
-                next_steps = 1;
+                next_steps = self.read_field_name();
             }
             Some(SpudTypes::Null) => {
                 print!("null");
@@ -149,9 +192,9 @@ impl SpudDecoder {
             Some(SpudTypes::Bool) => {
                 self.next(1).unwrap();
 
-                match self.file_contents[self.index] {
-                    0 => print!("false"),
-                    1 => print!("true"),
+                match self.file_contents.get(self.index) {
+                    Some(0) => print!("false"),
+                    Some(1) => print!("true"),
                     _ => panic!("Unknown bool value: {}", self.file_contents[self.index]),
                 }
 
@@ -228,85 +271,29 @@ impl SpudDecoder {
                 print!("{}", f64::from_le_bytes(read_bytes.try_into().unwrap()));
             }
             Some(SpudTypes::String) => {
-                self.next(1).unwrap();
-
-                let read_byte_value: usize;
-
-                match self.current_byte {
-                    val if val == SpudTypes::U8 as u8 => read_byte_value = 1,
-                    val if val == SpudTypes::U16 as u8 => read_byte_value = 2,
-                    val if val == SpudTypes::U32 as u8 => read_byte_value = 4,
-                    val if val == SpudTypes::U64 as u8 => read_byte_value = 8,
-
-                    _ => panic!("Expected: U8, U16, U32, U64, but got an unkown token"),
-                }
-
-                self.next(1).unwrap();
-
-                let read_bytes: Vec<u8> = self.read_bytes(read_byte_value);
-
-                let string_len: usize;
-
-                match read_byte_value {
-                    1 => string_len = u8::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-                    2 => string_len = u16::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-                    4 => string_len = u32::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-                    8 => string_len = u64::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-                    _ => panic!("Expected: U8, U16, U32, U64, but got an unkown token"),
-                }
-
+                let string_len: usize = self.read_variable_length_data();
                 print!(
                     "\"{}\"",
                     String::from_utf8(
-                        self.file_contents[self.index..self.index + string_len as usize].to_vec()
+                        self.file_contents[self.index..self.index + string_len].to_vec()
                     )
                     .unwrap()
                 );
-
-                next_steps = string_len as usize
+                next_steps = string_len;
             }
             Some(SpudTypes::BinaryBlob) => {
-                self.next(1).unwrap();
-
-                let read_byte_value: usize;
-
-                match self.current_byte {
-                    val if val == SpudTypes::U8 as u8 => read_byte_value = 1,
-                    val if val == SpudTypes::U16 as u8 => read_byte_value = 2,
-                    val if val == SpudTypes::U32 as u8 => read_byte_value = 4,
-                    val if val == SpudTypes::U64 as u8 => read_byte_value = 8,
-
-                    _ => panic!("Expected: U8, U16, U32, U64, but got an unkown token"),
-                }
-
-                self.next(1).unwrap();
-
-                let read_bytes: Vec<u8> = self.read_bytes(read_byte_value);
-
-                let blob_len: usize;
-
-                match read_byte_value {
-                    1 => blob_len = u8::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-                    2 => blob_len = u16::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-                    4 => blob_len = u32::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-                    8 => blob_len = u64::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-                    _ => panic!("Expected: U8, U16, U32, U64, but got an unkown token"),
-                }
-
+                let blob_len: usize = self.read_variable_length_data();
                 print!(
                     "{:?}",
-                    self.file_contents[self.index..self.index + blob_len as usize].to_vec()
+                    self.file_contents[self.index..self.index + blob_len].to_vec()
                 );
-
-                next_steps = blob_len as usize
+                next_steps = blob_len;
             }
             _ => {
                 if self.check_end(0) {
                     return;
                 }
-
-                println!("Unknown type: {}", result);
-
+                println!("Unknown type: {result}");
                 self.next(1).unwrap();
             }
         }
