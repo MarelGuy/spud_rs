@@ -2,7 +2,7 @@ pub mod spud_builder;
 pub mod spud_decoder;
 
 #[repr(u8)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SpudTypes {
     FieldNameListEnd = 0x01,
     FieldNameId = 0x02,

@@ -1,12 +1,23 @@
-use std::{collections::HashMap, fs};
+#![allow(clippy::too_many_lines)]
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::{self, Write},
+    path::Path,
+};
+
+use serde_json::{Number, Value};
 
 use crate::SpudTypes;
 
 pub struct SpudDecoder {
     file_contents: Vec<u8>,
-    current_byte: u8,
     index: usize,
     field_names: HashMap<String, u8>,
+    output: HashMap<String, Value>,
+    current_byte: u8,
+    current_field: String,
+    output_json: String,
 }
 
 impl SpudDecoder {
@@ -70,8 +81,11 @@ impl SpudDecoder {
         Self {
             file_contents,
             index: 0,
-            current_byte: 0,
             field_names,
+            output: HashMap::new(),
+            current_byte: 0,
+            current_field: String::new(),
+            output_json: String::new(),
         }
     }
 
@@ -138,7 +152,7 @@ impl SpudDecoder {
             .0
             .clone();
 
-        print!("\"{field_name}\": ");
+        self.current_field = field_name;
 
         1
     }
@@ -166,142 +180,242 @@ impl SpudDecoder {
             2 => u16::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
             4 => u32::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
             8 => usize::try_from(u64::from_le_bytes(read_bytes.try_into().unwrap())).unwrap(),
-            _ => unreachable!(), // Should be caught by the first match
+            _ => unreachable!(),
         }
+    }
+
+    fn insert_value(&mut self, value: Value) {
+        self.output.insert(self.current_field.clone(), value);
+    }
+
+    /// # Panics
+    ///
+    /// Panics if serde fails to serialize the file
+    pub fn decode(&mut self, pretty: bool) -> &str {
+        let bit: Option<Value> = self.decode_bit(self.file_contents[self.index]);
+
+        if let Some(value) = bit {
+            self.insert_value(value);
+        }
+
+        if self.check_end(0) {
+            let output_json: Result<String, serde_json::Error> = if pretty {
+                serde_json::to_string_pretty(&self.output)
+            } else {
+                serde_json::to_string(&self.output)
+            };
+
+            let output: String = match output_json {
+                Ok(output) => output,
+
+                Err(err) => {
+                    tracing::error!("Error decoding output: {}", err);
+
+                    panic!("Closing...");
+                }
+            };
+
+            self.output_json = output;
+
+            return &self.output_json;
+        }
+
+        self.decode(pretty);
+
+        &self.output_json
     }
 
     /// # Panics
     ///
     /// Will panic on unknown type
-    pub fn decode(&mut self) {
-        let result: u8 = self.file_contents[self.index];
+    fn decode_bit(&mut self, bit: u8) -> Option<Value> {
+        // let result: u8 = self.file_contents[self.index];
 
-        let decode_result: Option<SpudTypes> = SpudTypes::from_u8(result);
+        let decode_result: Option<SpudTypes> = SpudTypes::from_u8(bit);
 
         let mut next_steps: usize = 0;
 
-        match decode_result {
-            Some(SpudTypes::FieldNameId) => {
-                next_steps = self.read_field_name();
-            }
-            Some(SpudTypes::Null) => {
-                print!("null");
+        if decode_result == Some(SpudTypes::FieldNameId) {
+            next_steps = self.read_field_name();
 
-                next_steps = 1;
-            }
-            Some(SpudTypes::Bool) => {
-                self.next(1).unwrap();
+            self.next(next_steps).unwrap();
 
-                match self.file_contents.get(self.index) {
-                    Some(0) => print!("false"),
-                    Some(1) => print!("true"),
-                    _ => panic!("Unknown bool value: {}", self.file_contents[self.index]),
+            None
+        } else {
+            let return_value: Value = match decode_result {
+                Some(SpudTypes::Null) => {
+                    next_steps = 1;
+
+                    Value::Null
                 }
+                Some(SpudTypes::Bool) => {
+                    self.next(1).unwrap();
 
-                next_steps = 1;
-            }
-            Some(SpudTypes::U8) => {
-                self.next(1).unwrap();
+                    let value: Value = match self.file_contents.get(self.index) {
+                        Some(0) => Value::Bool(false),
+                        Some(1) => Value::Bool(true),
+                        _ => panic!("Unknown bool value: {}", self.file_contents[self.index]),
+                    };
 
-                let read_bytes: Vec<u8> = self.read_bytes(1);
+                    next_steps = 1;
 
-                print!("{}", u8::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::U16) => {
-                self.next(1).unwrap();
+                    value
+                }
+                Some(SpudTypes::U8) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(2);
+                    let read_bytes: Vec<u8> = self.read_bytes(1);
 
-                print!("{}", u16::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::U32) => {
-                self.next(1).unwrap();
+                    Value::Number(Number::from(u8::from_le_bytes(
+                        read_bytes.try_into().unwrap(),
+                    )))
+                }
+                Some(SpudTypes::U16) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(4);
+                    let read_bytes: Vec<u8> = self.read_bytes(2);
 
-                print!("{}", u32::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::U64) => {
-                self.next(1).unwrap();
+                    Value::Number(Number::from(u16::from_le_bytes(
+                        read_bytes.try_into().unwrap(),
+                    )))
+                }
+                Some(SpudTypes::U32) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(8);
+                    let read_bytes: Vec<u8> = self.read_bytes(4);
 
-                print!("{}", u64::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::I8) => {
-                self.next(1).unwrap();
+                    Value::Number(Number::from(u32::from_le_bytes(
+                        read_bytes.try_into().unwrap(),
+                    )))
+                }
+                Some(SpudTypes::U64) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(1);
+                    let read_bytes: Vec<u8> = self.read_bytes(8);
 
-                print!("{}", i8::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::I16) => {
-                self.next(1).unwrap();
+                    Value::Number(Number::from(u64::from_le_bytes(
+                        read_bytes.try_into().unwrap(),
+                    )))
+                }
+                Some(SpudTypes::I8) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(2);
+                    let read_bytes: Vec<u8> = self.read_bytes(1);
 
-                print!("{}", i16::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::I32) => {
-                self.next(1).unwrap();
+                    Value::Number(Number::from(i8::from_le_bytes(
+                        read_bytes.try_into().unwrap(),
+                    )))
+                }
+                Some(SpudTypes::I16) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(4);
+                    let read_bytes: Vec<u8> = self.read_bytes(2);
 
-                print!("{}", i32::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::I64) => {
-                self.next(1).unwrap();
+                    Value::Number(Number::from(i16::from_le_bytes(
+                        read_bytes.try_into().unwrap(),
+                    )))
+                }
+                Some(SpudTypes::I32) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(8);
+                    let read_bytes: Vec<u8> = self.read_bytes(4);
 
-                print!("{}", i64::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::F32) => {
-                self.next(1).unwrap();
+                    Value::Number(Number::from(i32::from_le_bytes(
+                        read_bytes.try_into().unwrap(),
+                    )))
+                }
+                Some(SpudTypes::I64) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(4);
+                    let read_bytes: Vec<u8> = self.read_bytes(8);
 
-                print!("{}", f32::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::F64) => {
-                self.next(1).unwrap();
+                    Value::Number(Number::from(i64::from_le_bytes(
+                        read_bytes.try_into().unwrap(),
+                    )))
+                }
+                Some(SpudTypes::F32) => {
+                    self.next(1).unwrap();
 
-                let read_bytes: Vec<u8> = self.read_bytes(8);
+                    let read_bytes: Vec<u8> = self.read_bytes(4);
 
-                print!("{}", f64::from_le_bytes(read_bytes.try_into().unwrap()));
-            }
-            Some(SpudTypes::String) => {
-                let string_len: usize = self.read_variable_length_data();
-                print!(
-                    "\"{}\"",
-                    String::from_utf8(
-                        self.file_contents[self.index..self.index + string_len].to_vec()
+                    Value::Number(
+                        Number::from_f64(f32::from_le_bytes(read_bytes.try_into().unwrap()).into())
+                            .unwrap(),
                     )
-                    .unwrap()
-                );
-                next_steps = string_len;
-            }
-            Some(SpudTypes::BinaryBlob) => {
-                let blob_len: usize = self.read_variable_length_data();
-                print!(
-                    "{:?}",
-                    self.file_contents[self.index..self.index + blob_len].to_vec()
-                );
-                next_steps = blob_len;
-            }
-            _ => {
-                if self.check_end(0) {
-                    return;
                 }
-                println!("Unknown type: {result}");
-                self.next(1).unwrap();
+                Some(SpudTypes::F64) => {
+                    self.next(1).unwrap();
+
+                    let read_bytes: Vec<u8> = self.read_bytes(8);
+
+                    Value::Number(
+                        Number::from_f64(f64::from_le_bytes(read_bytes.try_into().unwrap()))
+                            .unwrap(),
+                    )
+                }
+                Some(SpudTypes::String) => {
+                    let string_len: usize = self.read_variable_length_data();
+
+                    next_steps = string_len;
+
+                    Value::String(
+                        String::from_utf8(
+                            self.file_contents[self.index..self.index + string_len].to_vec(),
+                        )
+                        .unwrap(),
+                    )
+                }
+                Some(SpudTypes::BinaryBlob) => {
+                    let blob_len: usize = self.read_variable_length_data();
+
+                    let processed: Vec<u8> =
+                        self.file_contents[self.index..self.index + blob_len].to_vec();
+
+                    let mut output_array: Vec<Value> = vec![];
+
+                    for processed_bit in &processed {
+                        output_array.push(Value::Number(Number::from(*processed_bit)));
+                    }
+
+                    next_steps = blob_len;
+
+                    Value::Array(output_array)
+                }
+                _ => {
+                    tracing::error!("Unknown type: {bit} at index {}", self.index);
+
+                    panic!("Closing...");
+                }
+            };
+
+            self.next(next_steps).unwrap();
+
+            Some(return_value)
+        }
+    }
+
+    /// # Panics
+    ///
+    /// Panics if the file has errors being written
+    pub fn build_file(&self, path: &str) {
+        let path: &Path = Path::new(path);
+
+        let file: Result<File, io::Error> = File::create(path);
+
+        let res: Result<(), io::Error> = match file {
+            Ok(mut file) => file.write_all(self.output_json.as_bytes()),
+            Err(err) => {
+                tracing::error!("Error creating file: {}", err);
+                panic!("Closing...")
+            }
+        };
+
+        match res {
+            Ok(()) => {}
+            Err(err) => {
+                tracing::error!("Error writing file: {}", err);
+                panic!("Closing...")
             }
         }
-
-        println!();
-
-        self.next(next_steps).unwrap();
-
-        self.decode();
     }
 }

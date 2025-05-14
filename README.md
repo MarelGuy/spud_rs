@@ -74,7 +74,7 @@ Here are some planned features and improvements:
 
 * **[ ] Arrays and Objects:** Implement support for nested structures using the defined `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags. This will involve updating both the builder and decoder.
 * **[ ] Improved Error Handling:** Replace `.unwrap()` and `panic!` calls in the decoder with proper `Result` types for robust error management. Define custom error types for different parsing issues.
-* **[ ] `serde` Integration:** Implement `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder` to allow seamless conversion between Rust structs and the SPUD format.
+* **[x] `serde` Integration:** Implement `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder` to allow seamless conversion between Rust structs and the SPUD format.
 * **[ ] Documentation:** Generate API documentation using `cargo doc`.
 * **[ ] More Types:** Support for timestamps, decimals, or other common data types if needed.
 
