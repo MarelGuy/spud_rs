@@ -175,3 +175,201 @@ impl Default for SpudBuilder {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::SpudTypes;
+
+    #[test]
+    fn test_new_spud_builder() {
+        let builder = SpudBuilder::new();
+
+        assert!(builder.data.is_empty());
+        assert!(builder.field_names.is_empty());
+        assert_eq!(builder.field_names_index, 1);
+    }
+
+    #[test]
+    fn test_add_field_name() {
+        let mut builder = SpudBuilder::new();
+
+        builder.add_field_name("test_field");
+
+        assert_eq!(builder.data.len(), 2);
+        assert_eq!(builder.data[0], SpudTypes::FieldNameId as u8);
+        assert_eq!(builder.data[1], 2);
+        assert_eq!(builder.field_names_index, 2);
+        assert!(
+            builder
+                .field_names
+                .contains_key(&("test_field".to_string(), 10))
+        );
+
+        builder.add_field_name("test_field");
+
+        assert_eq!(builder.data.len(), 4);
+        assert_eq!(builder.data[2], SpudTypes::FieldNameId as u8);
+        assert_eq!(builder.data[3], 2);
+        assert_eq!(builder.field_names_index, 2);
+    }
+
+    #[test]
+    fn test_add_null() {
+        let mut builder = SpudBuilder::new();
+
+        builder.add_null("null_field");
+
+        assert_eq!(builder.data.len(), 3);
+        assert_eq!(builder.data[0], SpudTypes::FieldNameId as u8);
+        assert_eq!(builder.data[2], SpudTypes::Null as u8);
+    }
+
+    #[test]
+    fn test_add_bool() {
+        let mut builder = SpudBuilder::new();
+
+        builder.add_bool("bool_true_field", true);
+        builder.add_bool("bool_false_field", false);
+
+        assert_eq!(builder.data.len(), 8);
+        assert_eq!(builder.data[2], SpudTypes::Bool as u8);
+        assert_eq!(builder.data[3], 1); // true
+        assert_eq!(builder.data[6], SpudTypes::Bool as u8);
+        assert_eq!(builder.data[7], 0); // false
+    }
+
+    #[test]
+    fn test_add_number_u8() {
+        let mut builder = SpudBuilder::new();
+        let value: u8 = 42;
+
+        builder.add_number("u8_field", value);
+
+        assert_eq!(builder.data.len(), 2 + 1 + 1);
+        assert_eq!(builder.data[2], SpudTypes::U8 as u8);
+        assert_eq!(builder.data[3], value);
+    }
+
+    #[test]
+    fn test_add_number_i32() {
+        let mut builder = SpudBuilder::new();
+
+        let value: i32 = -1000;
+
+        builder.add_number("i32_field", value);
+
+        assert_eq!(builder.data.len(), 2 + 1 + 4);
+        assert_eq!(builder.data[2], SpudTypes::I32 as u8);
+        assert_eq!(&builder.data[3..7], &value.to_le_bytes());
+    }
+
+    #[test]
+    fn test_add_string() {
+        let mut builder = SpudBuilder::new();
+        let value = "hello";
+
+        builder.add_string("string_field", value);
+
+        assert_eq!(builder.data.len(), 2 + 1 + 1 + 1 + value.len());
+        assert_eq!(builder.data[2], SpudTypes::String as u8);
+        assert_eq!(builder.data[3], SpudTypes::U8 as u8);
+        assert_eq!(builder.data[4], value.len() as u8);
+        assert_eq!(&builder.data[5..5 + value.len()], value.as_bytes());
+    }
+
+    #[test]
+    fn test_add_binary_blob() {
+        let mut builder = SpudBuilder::new();
+
+        let value: &[u8] = &[0x01, 0x02, 0x03, 0x04, 0x05];
+
+        builder.add_binary_blob("blob_field", value);
+
+        assert_eq!(builder.data.len(), 2 + 1 + 1 + 1 + value.len());
+        assert_eq!(builder.data[2], SpudTypes::BinaryBlob as u8);
+        assert_eq!(builder.data[3], SpudTypes::U8 as u8);
+        assert_eq!(builder.data[4], value.len() as u8);
+        assert_eq!(&builder.data[5..5 + value.len()], value);
+    }
+
+    #[test]
+    fn test_add_value_length() {
+        let mut builder = SpudBuilder::new();
+
+        builder.data.clear();
+        builder.add_value_length(u8::MAX as usize);
+
+        assert_eq!(builder.data[0], SpudTypes::U8 as u8);
+        assert_eq!(builder.data[1], u8::MAX);
+
+        builder.data.clear();
+
+        let len_u16 = (u8::MAX as usize) + 1;
+
+        builder.add_value_length(len_u16);
+
+        assert_eq!(builder.data[0], SpudTypes::U16 as u8);
+        assert_eq!(&builder.data[1..3], &(len_u16 as u16).to_le_bytes());
+
+        builder.data.clear();
+
+        let len_u32 = (u16::MAX as usize) + 1;
+
+        builder.add_value_length(len_u32);
+
+        assert_eq!(builder.data[0], SpudTypes::U32 as u8);
+        assert_eq!(&builder.data[1..5], &(len_u32 as u32).to_le_bytes());
+
+        builder.data.clear();
+
+        let len_u64 = (u32::MAX as usize) + 1;
+
+        builder.add_value_length(len_u64);
+
+        assert_eq!(builder.data[0], SpudTypes::U64 as u8);
+        assert_eq!(&builder.data[1..9], &(len_u64 as u64).to_le_bytes());
+    }
+
+    #[cfg(not(feature = "async"))]
+    #[test]
+    fn test_build_file_sync() {
+        let mut builder = SpudBuilder::new();
+
+        builder.add_string("greeting", "hello spud");
+
+        let dir = tempfile::tempdir().unwrap();
+        let path_str = dir.path().to_str().unwrap();
+
+        builder.build_file(path_str, "test_output_sync");
+
+        let mut expected_file_path = dir.path().to_path_buf();
+
+        expected_file_path.push("test_output_sync.spud");
+
+        assert!(expected_file_path.exists());
+
+        dir.close().unwrap();
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_build_file_async() {
+        let mut builder = SpudBuilder::new();
+
+        builder.add_string("greeting_async", "hello async spud");
+
+        let dir = tempfile::tempdir().unwrap();
+        let path_str = dir.path().to_str().unwrap();
+
+        builder.build_file(path_str, "test_output_async").await;
+
+        let mut expected_file_path = dir.path().to_path_buf();
+
+        expected_file_path.push("test_output_async.spud");
+
+        assert!(tokio::fs::try_exists(&expected_file_path).await.unwrap());
+
+        dir.close().unwrap();
+    }
+}
