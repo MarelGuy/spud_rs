@@ -1,6 +1,12 @@
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
 
 use spud_add_number::SpudAddNumber;
+
+#[cfg(feature = "async")]
+use tokio::fs::write;
+
+#[cfg(not(feature = "async"))]
+use std::fs;
 
 use crate::SpudTypes;
 
@@ -113,6 +119,32 @@ impl SpudBuilder {
         self
     }
 
+    #[cfg(feature = "async")]
+    /// # Panics
+    ///
+    /// Will panic if the path is invalid
+    pub async fn build_file(&mut self, path: &str, file_name: &str) {
+        let path_str: String = format!("{path}/{file_name}.spud");
+
+        let mut header: Vec<u8> = env!("SPUD_VERSION").as_bytes().to_vec();
+
+        for (name, id) in &self.field_names {
+            header.push(name.1);
+
+            header.extend_from_slice(name.0.as_bytes());
+
+            header.push(*id);
+        }
+
+        header.push(SpudTypes::FieldNameListEnd as u8);
+
+        header.extend_from_slice(&self.data);
+        header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
+
+        write(path_str, header).await.unwrap();
+    }
+
+    #[cfg(not(feature = "async"))]
     /// # Panics
     ///
     /// Will panic if the path is invalid

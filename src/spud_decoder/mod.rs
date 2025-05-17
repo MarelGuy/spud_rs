@@ -1,12 +1,23 @@
 #![allow(clippy::too_many_lines)]
 use std::{
     collections::HashMap,
-    fs::{self, File},
-    io::{self, Write},
+    io::{self},
     path::Path,
 };
 
 use serde_json::{Number, Value};
+
+#[cfg(feature = "async")]
+use tokio::{
+    fs::{File as TokioFile, read as tokio_read},
+    io::AsyncWriteExt,
+};
+
+#[cfg(not(feature = "async"))]
+use std::{
+    fs::{File as StdFile, read as std_read},
+    io::Write,
+};
 
 use crate::SpudTypes;
 
@@ -89,12 +100,24 @@ impl SpudDecoder {
         }
     }
 
+    #[cfg(feature = "async")]
+    #[must_use]
+    /// # Panics
+    ///
+    /// Will panic if the path is invalid
+    pub async fn new_from_path(path: &str) -> Self {
+        let file: Vec<u8> = tokio_read(path).await.unwrap();
+
+        Self::new(&file)
+    }
+
+    #[cfg(not(feature = "async"))]
     #[must_use]
     /// # Panics
     ///
     /// Will panic if the path is invalid
     pub fn new_from_path(path: &str) -> Self {
-        let file: Vec<u8> = fs::read(path).unwrap();
+        let file: Vec<u8> = std_read(path).unwrap();
 
         Self::new(&file)
     }
@@ -394,13 +417,40 @@ impl SpudDecoder {
         }
     }
 
+    #[cfg(feature = "async")]
+    /// # Panics
+    ///
+    /// Panics if the file has errors being written
+    pub async fn build_file(&self, path: &str) {
+        let path: &Path = Path::new(path);
+
+        let file: Result<TokioFile, io::Error> = TokioFile::create(path).await;
+
+        let res: Result<(), io::Error> = match file {
+            Ok(mut file) => file.write_all(self.output_json.as_bytes()).await,
+            Err(err) => {
+                tracing::error!("Error creating file: {}", err);
+                panic!("Closing...")
+            }
+        };
+
+        match res {
+            Ok(()) => {}
+            Err(err) => {
+                tracing::error!("Error writing file: {}", err);
+                panic!("Closing...")
+            }
+        }
+    }
+
+    #[cfg(not(feature = "async"))]
     /// # Panics
     ///
     /// Panics if the file has errors being written
     pub fn build_file(&self, path: &str) {
         let path: &Path = Path::new(path);
 
-        let file: Result<File, io::Error> = File::create(path);
+        let file: Result<StdFile, io::Error> = StdFile::create(path);
 
         let res: Result<(), io::Error> = match file {
             Ok(mut file) => file.write_all(self.output_json.as_bytes()),
