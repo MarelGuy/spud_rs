@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use spud_add_number::SpudAddNumber;
+use std::{collections::HashMap, path::Path, process};
 
 #[cfg(feature = "async")]
 use tokio::fs::write;
@@ -124,7 +123,14 @@ impl SpudBuilder {
     ///
     /// Will panic if the path is invalid
     pub async fn build_file(&mut self, path: &str, file_name: &str) {
-        let path_str: String = format!("{path}/{file_name}.spud");
+        let path_str: &str = &format!("{path}/{file_name}.spud");
+
+        let path: &Path = Path::new(path_str);
+
+        if !path.exists() {
+            tracing::error!("Path {} does not exist", path.display());
+            process::exit(0);
+        }
 
         let mut header: Vec<u8> = env!("SPUD_VERSION").as_bytes().to_vec();
 
@@ -141,7 +147,7 @@ impl SpudBuilder {
         header.extend_from_slice(&self.data);
         header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
 
-        write(path_str, header).await.unwrap();
+        write(path, header).await.unwrap();
     }
 
     #[cfg(not(feature = "async"))]
@@ -149,7 +155,14 @@ impl SpudBuilder {
     ///
     /// Will panic if the path is invalid
     pub fn build_file(&mut self, path: &str, file_name: &str) {
-        let path_str: String = format!("{path}/{file_name}.spud");
+        let path_str: &str = &format!("{path}/{file_name}.spud");
+
+        let path: &Path = Path::new(path_str);
+
+        if !path.exists() {
+            tracing::error!("Path {} does not exist", path.display());
+            process::exit(0);
+        }
 
         let mut header: Vec<u8> = env!("SPUD_VERSION").as_bytes().to_vec();
 
@@ -166,7 +179,7 @@ impl SpudBuilder {
         header.extend_from_slice(&self.data);
         header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
 
-        fs::write(path_str, header).unwrap();
+        fs::write(path, header).unwrap();
     }
 }
 
