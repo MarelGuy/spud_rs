@@ -1,7 +1,7 @@
 
 # SPUD (Structured Payload of Unintelligible Data)
 
-SPUD is a custom binary file format designed for efficient storage and transmission of structured data. It uses type tags and field name interning to achieve a compact representation. This implementation is written in Rust.
+SPUD is a custom binary file format designed for efficient storage and transmission of structured data. It uses schemas, type tags and field name interning to achieve a compact representation. This implementation is written in Rust.
 
 ## Features
 
