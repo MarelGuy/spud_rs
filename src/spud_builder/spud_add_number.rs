@@ -1,4 +1,4 @@
-use crate::SpudTypes;
+use crate::spud_types::SpudTypes;
 
 fn append_le_bytes<T: AsRef<[u8]>>(bytes: T, writer: &mut Vec<u8>) {
     writer.extend_from_slice(bytes.as_ref());

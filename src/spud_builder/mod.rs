@@ -9,7 +9,7 @@ use tokio::fs::write;
 #[cfg(not(feature = "async"))]
 use std::fs;
 
-use crate::SpudTypes;
+use crate::spud_types::SpudTypes;
 
 pub mod spud_add_number;
 pub mod spud_type_ext;
@@ -164,7 +164,7 @@ impl Default for SpudBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::SpudTypes;
+    use crate::spud_types::SpudTypes;
 
     #[test]
     fn test_new_spud_builder() {

@@ -19,7 +19,7 @@ use std::{
     io::Write,
 };
 
-use crate::SpudTypes;
+use crate::spud_types::SpudTypes;
 
 pub struct SpudDecoder {
     file_contents: Vec<u8>,
@@ -471,8 +471,8 @@ impl SpudDecoder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::SpudTypes;
     use crate::spud_builder::SpudBuilder;
+    use crate::spud_types::SpudTypes;
     use serde_json::json;
 
     fn create_test_spud_file_bytes(add_data_fn: impl FnOnce(&mut SpudBuilder)) -> Vec<u8> {

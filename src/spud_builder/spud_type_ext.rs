@@ -1,4 +1,4 @@
-use crate::SpudTypes;
+use crate::spud_types::SpudTypes;
 
 pub trait SpudTypesExt {
     fn get_spud_type_tag(&self) -> SpudTypes;
