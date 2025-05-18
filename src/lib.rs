@@ -1,6 +1,8 @@
 pub mod spud_builder;
 pub mod spud_decoder;
 
+mod functions;
+
 #[repr(u8)]
 #[derive(Debug, PartialEq)]
 pub enum SpudTypes {

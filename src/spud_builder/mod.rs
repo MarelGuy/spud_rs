@@ -1,6 +1,8 @@
 use spud_add_number::SpudAddNumber;
 use std::{collections::HashMap, path::Path, process};
 
+use crate::functions::{check_path::check_path, initialise_header::initialise_header};
+
 #[cfg(feature = "async")]
 use tokio::fs::write;
 
@@ -122,30 +124,15 @@ impl SpudBuilder {
     /// # Panics
     ///
     /// Will panic if the path is invalid
-    pub async fn build_file(&mut self, path: &str, file_name: &str) {
-        let path_str: &str = &format!("{path}/{file_name}.spud");
+    pub async fn build_file(&mut self, path_str: &str, file_name: &str) {
+        let path_str: String = match check_path(path_str, file_name) {
+            Some(path) => path,
+            None => process::exit(1),
+        };
 
-        let path: &Path = Path::new(path_str);
+        let path: &Path = Path::new(&path_str);
 
-        if !path.exists() {
-            tracing::error!("Path {} does not exist", path.display());
-            process::exit(0);
-        }
-
-        let mut header: Vec<u8> = env!("SPUD_VERSION").as_bytes().to_vec();
-
-        for (name, id) in &self.field_names {
-            header.push(name.1);
-
-            header.extend_from_slice(name.0.as_bytes());
-
-            header.push(*id);
-        }
-
-        header.push(SpudTypes::FieldNameListEnd as u8);
-
-        header.extend_from_slice(&self.data);
-        header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
+        let header: Vec<u8> = initialise_header(&self.field_names, &self.data);
 
         write(path, header).await.unwrap();
     }
@@ -154,30 +141,15 @@ impl SpudBuilder {
     /// # Panics
     ///
     /// Will panic if the path is invalid
-    pub fn build_file(&mut self, path: &str, file_name: &str) {
-        let path_str: &str = &format!("{path}/{file_name}.spud");
+    pub fn build_file(&mut self, path_str: &str, file_name: &str) {
+        let path_str: String = match check_path(path_str, file_name) {
+            Some(path) => path,
+            None => process::exit(1),
+        };
 
-        let path: &Path = Path::new(path_str);
+        let path: &Path = Path::new(&path_str);
 
-        if !path.exists() {
-            tracing::error!("Path {} does not exist", path.display());
-            process::exit(0);
-        }
-
-        let mut header: Vec<u8> = env!("SPUD_VERSION").as_bytes().to_vec();
-
-        for (name, id) in &self.field_names {
-            header.push(name.1);
-
-            header.extend_from_slice(name.0.as_bytes());
-
-            header.push(*id);
-        }
-
-        header.push(SpudTypes::FieldNameListEnd as u8);
-
-        header.extend_from_slice(&self.data);
-        header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
+        let header: Vec<u8> = initialise_header(&self.field_names, &self.data);
 
         fs::write(path, header).unwrap();
     }
