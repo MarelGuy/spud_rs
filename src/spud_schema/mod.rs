@@ -1,12 +1,14 @@
+pub mod spud_schema_types;
+
 use std::collections::HashMap;
 
-use crate::spud_types::SpudTypes;
+use spud_schema_types::SpudSchemaTypes;
 
 #[derive(Debug, PartialEq, Default)]
-pub struct SpudSchema(pub HashMap<String, SpudTypes>);
+pub struct SpudSchema(pub HashMap<String, SpudSchemaTypes>);
 
-impl From<HashMap<String, SpudTypes>> for SpudSchema {
-    fn from(m: HashMap<String, SpudTypes>) -> Self {
+impl From<HashMap<String, SpudSchemaTypes>> for SpudSchema {
+    fn from(m: HashMap<String, SpudSchemaTypes>) -> Self {
         Self(m)
     }
 }
@@ -14,11 +16,11 @@ impl From<HashMap<String, SpudTypes>> for SpudSchema {
 #[macro_export]
 macro_rules! schema {
     () => {
-        SpudSchema::from(std::collections::HashMap::<String, SpudTypes>::new())
+        SpudSchema::from(std::collections::HashMap::<String, SpudSchemaTypes>::new())
     };
     ( $( $key:literal : $value:expr ),+ $(,)? ) => {
         {
-            let mut map: std::collections::HashMap<String, SpudTypes> = std::collections::HashMap::new();
+            let mut map: std::collections::HashMap<String, SpudSchemaTypes> = std::collections::HashMap::new();
 
             $(
                 map.insert($key.into(), $value);
