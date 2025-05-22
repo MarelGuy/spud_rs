@@ -2,7 +2,10 @@
 use spud_type_ext::SpudTypesExt;
 use std::{collections::HashMap, path::Path, process};
 
-use crate::functions::{check_path::check_path, initialise_header::initialise_header};
+use crate::{
+    functions::{check_path::check_path, initialise_header::initialise_header},
+    types::object_id::ObjectId,
+};
 
 #[cfg(feature = "async")]
 use tokio::fs::write;
@@ -24,10 +27,25 @@ pub struct SpudBuilder {
 impl SpudBuilder {
     #[must_use]
     pub fn new() -> Self {
+        let id: [u8; 10] = ObjectId::new().0;
+
+        let mut data: Vec<u8> = Vec::new();
+
+        let mut field_names: HashMap<(String, u8), u8> = HashMap::new();
+        let field_names_index: u8 = 2;
+
+        field_names.insert(("id".into(), 2), 2);
+
+        data.push(SpudTypes::FieldNameId as u8);
+        data.push(2);
+
+        data.push(SpudTypes::ObjectId as u8);
+        data.extend_from_slice(&id);
+
         Self {
-            data: Vec::new(),
-            field_names: HashMap::new(),
-            field_names_index: 1,
+            data,
+            field_names,
+            field_names_index,
         }
     }
 
@@ -47,6 +65,14 @@ impl SpudBuilder {
 
         self
     }
+
+    // pub fn add_object(&mut self, field_name: &str, value: SpudBuilder) -> &mut Self {
+    //     self.add_field_name(field_name);
+
+    //     self.data.push(SpudTypes::ObjectStart as u8);
+
+    //     self
+    // }
 
     pub fn add_value<T: SpudTypesExt>(&mut self, field_name: &str, value: T) -> &mut Self {
         self.add_field_name(field_name);

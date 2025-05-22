@@ -241,6 +241,15 @@ impl SpudDecoder {
             None
         } else {
             let return_value: Value = match decode_result {
+                Some(SpudTypes::ObjectId) => {
+                    self.next(1).unwrap();
+
+                    let read_bytes: Vec<u8> = self.read_bytes(10);
+
+                    let object_id: String = bs58::encode(&read_bytes).into_string();
+
+                    Value::String(object_id)
+                }
                 Some(SpudTypes::Null) => {
                     next_steps = 1;
 

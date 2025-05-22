@@ -21,6 +21,7 @@ pub enum SpudTypes {
     ObjectStart = 0x12,
     ObjectEnd = 0x13,
     BinaryBlob = 0x14,
+    ObjectId = 0x15,
 }
 
 impl SpudTypes {
@@ -47,6 +48,7 @@ impl SpudTypes {
             0x12 => Some(SpudTypes::ObjectStart),
             0x13 => Some(SpudTypes::ObjectEnd),
             0x14 => Some(SpudTypes::BinaryBlob),
+            0x15 => Some(SpudTypes::ObjectId),
             _ => None,
         }
     }
