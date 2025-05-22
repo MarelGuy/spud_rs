@@ -47,20 +47,6 @@ impl SpudBuilder {
         self
     }
 
-    pub fn add_array<T: SpudTypesExt>(&mut self, field_name: &str, value: &[T]) -> &mut Self {
-        self.add_field_name(field_name);
-
-        self.data.push(SpudTypes::ArrayStart as u8);
-
-        for item in value {
-            item.write_spud_bytes(&mut self.data);
-        }
-
-        self.data.push(SpudTypes::ArrayEnd as u8);
-
-        self
-    }
-
     pub fn add_value<T: SpudTypesExt>(&mut self, field_name: &str, value: T) -> &mut Self {
         self.add_field_name(field_name);
 
