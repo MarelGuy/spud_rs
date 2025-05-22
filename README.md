@@ -121,7 +121,7 @@ let data: MyData = decoder.deserialize().unwrap();
 
 Here are some planned features and improvements:
 
-* **[x] Arrays and Objects:** Support for nested structures using `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags.
+* **[\\] Arrays and Objects:** Support for nested structures using `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags.
 * **[ ] Improved Error Handling:** Replace `.unwrap()` and `panic!` calls in the decoder with proper `Result` types for robust error management. Define custom error types for different parsing issues.
 * **[x] `serde` Integration:** Implemented `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder`.
 * **[ ] Documentation:** Generate API documentation using `cargo doc`.
