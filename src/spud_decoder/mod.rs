@@ -56,7 +56,8 @@ impl SpudDecoder {
 
         match field_name_list_end_byte_index {
             Some(index) => {
-                let (field_names_bytes, file_content) = file_contents.split_at(index + 1);
+                let (field_names_bytes, file_content): (&[u8], &[u8]) =
+                    file_contents.split_at(index + 1);
 
                 let mut cursor: usize = 0;
 
@@ -215,37 +216,34 @@ impl SpudDecoder {
     ///
     /// Panics if serde fails to serialize the file
     pub fn decode(&mut self, pretty: bool) -> &str {
-        let bit: Option<Value> = self.decode_bit(self.file_contents[self.index]);
+        loop {
+            let bit: Option<Value> = self.decode_bit(self.file_contents[self.index]);
 
-        if let Some(value) = bit {
-            self.insert_value(value);
+            if let Some(value) = bit {
+                self.insert_value(value);
+            }
+
+            if self.check_end(0) {
+                let output_json: Result<String, serde_json::Error> = if pretty {
+                    serde_json::to_string_pretty(&self.output)
+                } else {
+                    serde_json::to_string(&self.output)
+                };
+
+                let output: String = match output_json {
+                    Ok(output) => output,
+
+                    Err(err) => {
+                        tracing::error!("Error decoding output: {}", err);
+                        panic!("Closing...");
+                    }
+                };
+
+                self.output_json = output;
+
+                return &self.output_json;
+            }
         }
-
-        if self.check_end(0) {
-            let output_json: Result<String, serde_json::Error> = if pretty {
-                serde_json::to_string_pretty(&self.output)
-            } else {
-                serde_json::to_string(&self.output)
-            };
-
-            let output: String = match output_json {
-                Ok(output) => output,
-
-                Err(err) => {
-                    tracing::error!("Error decoding output: {}", err);
-
-                    panic!("Closing...");
-                }
-            };
-
-            self.output_json = output;
-
-            return &self.output_json;
-        }
-
-        self.decode(pretty);
-
-        &self.output_json
     }
 
     /// # Panics
