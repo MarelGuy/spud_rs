@@ -400,6 +400,34 @@ impl SpudDecoder {
 
                     Value::Array(output_array)
                 }
+                Some(SpudTypes::ArrayStart) => {
+                    self.next(1).unwrap();
+
+                    let mut output_array: Vec<Value> = vec![];
+
+                    loop {
+                        let bit = SpudTypes::from_u8(self.file_contents[self.index]);
+
+                        if bit == Some(SpudTypes::ArrayEnd) {
+                            break;
+                        }
+
+                        let decoded_bit: Option<Value> =
+                            self.decode_bit(self.file_contents[self.index]);
+
+                        if let Some(value) = decoded_bit {
+                            output_array.push(value);
+                        }
+
+                        if self.check_end(0) {
+                            break;
+                        }
+                    }
+
+                    next_steps = 1;
+
+                    Value::Array(output_array)
+                }
                 _ => {
                     tracing::error!("Unknown type: {bit} at index {}", self.index);
 
