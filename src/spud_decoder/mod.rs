@@ -385,7 +385,8 @@ impl SpudDecoder {
                     let mut output_array: Vec<Value> = vec![];
 
                     loop {
-                        let bit = SpudTypes::from_u8(self.file_contents[self.index]);
+                        let bit: Option<SpudTypes> =
+                            SpudTypes::from_u8(self.file_contents[self.index]);
 
                         if bit == Some(SpudTypes::ArrayEnd) {
                             break;
