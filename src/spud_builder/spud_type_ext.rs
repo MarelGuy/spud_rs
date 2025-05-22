@@ -43,30 +43,6 @@ macro_rules! impl_spud_type_ext {
     };
 }
 
-fn write_string(value: &SpudString, data: &mut Vec<u8>) {
-    add_value_length(data, value.0.len());
-
-    data.extend_from_slice(value.0.as_bytes());
-}
-
-fn write_blob(value: &BinaryBlobStruct, data: &mut Vec<u8>) {
-    add_value_length(data, value.0.len());
-
-    data.extend_from_slice(value.0);
-}
-
-fn write_bool(value: bool, data: &mut Vec<u8>) {
-    data.push(u8::from(value));
-}
-
-fn write_null(_value: (), data: &mut Vec<u8>) {
-    data.push(SpudTypes::Null as u8);
-}
-
-fn write_primitive_value<T: SpudPrimitiveWriter>(value: T, data: &mut Vec<u8>) {
-    value.write_primitive(data);
-}
-
 impl<T: SpudTypesExt> SpudTypesExt for Vec<T> {
     fn get_spud_type_tag(&self) -> SpudTypes {
         SpudTypes::ArrayStart
@@ -115,4 +91,28 @@ impl_spud_type_ext! {
     u64, U64, write_primitive_value,
     f64, F64, write_primitive_value,
     (), Null, write_null,
+}
+
+fn write_string(value: &SpudString, data: &mut Vec<u8>) {
+    add_value_length(data, value.0.len());
+
+    data.extend_from_slice(value.0.as_bytes());
+}
+
+fn write_blob(value: &BinaryBlobStruct, data: &mut Vec<u8>) {
+    add_value_length(data, value.0.len());
+
+    data.extend_from_slice(value.0);
+}
+
+fn write_bool(value: bool, data: &mut Vec<u8>) {
+    data.push(u8::from(value));
+}
+
+fn write_null(_value: (), data: &mut Vec<u8>) {
+    data.push(SpudTypes::Null as u8);
+}
+
+fn write_primitive_value<T: SpudPrimitiveWriter>(value: T, data: &mut Vec<u8>) {
+    value.write_primitive(data);
 }
