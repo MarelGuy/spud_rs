@@ -14,6 +14,7 @@ use crate::spud_types::SpudTypes;
 
 pub mod spud_type_ext;
 
+#[derive(Default, Debug, Clone)]
 pub struct SpudBuilder {
     pub data: Vec<u8>,
     pub field_names: HashMap<(String, u8), u8>,
@@ -54,7 +55,9 @@ impl SpudBuilder {
 
         self
     }
+}
 
+impl SpudBuilder {
     #[cfg(feature = "async")]
     /// # Panics
     ///
@@ -90,8 +93,30 @@ impl SpudBuilder {
     }
 }
 
-impl Default for SpudBuilder {
-    fn default() -> Self {
-        Self::new()
+#[cfg(feature = "hashmap")]
+impl SpudBuilder {
+    pub(crate) fn add_hash_value(
+        &mut self,
+        field_name: &str,
+        value: &dyn SpudTypesExt,
+    ) -> &mut Self {
+        self.add_field_name(field_name);
+
+        value.write_spud_bytes(&mut self.data);
+
+        self
+    }
+}
+
+#[cfg(feature = "hashmap")]
+impl From<HashMap<String, Box<dyn SpudTypesExt>>> for SpudBuilder {
+    fn from(map: HashMap<String, Box<dyn SpudTypesExt>>) -> Self {
+        let mut builder = SpudBuilder::new();
+
+        for (key, value) in map {
+            builder.add_hash_value(&key, &*value);
+        }
+
+        builder
     }
 }

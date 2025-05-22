@@ -21,6 +21,7 @@ use std::{
 
 use crate::spud_types::SpudTypes;
 
+#[derive(Default, Debug, Clone)]
 pub struct SpudDecoder {
     file_contents: Vec<u8>,
     index: usize,
@@ -99,28 +100,6 @@ impl SpudDecoder {
             current_field: String::new(),
             output_json: String::new(),
         }
-    }
-
-    #[cfg(feature = "async")]
-    #[must_use]
-    /// # Panics
-    ///
-    /// Will panic if the path is invalid
-    pub async fn new_from_path(path: &str) -> Self {
-        let file: Vec<u8> = tokio_read(path).await.unwrap();
-
-        Self::new(&file)
-    }
-
-    #[cfg(not(feature = "async"))]
-    #[must_use]
-    /// # Panics
-    ///
-    /// Will panic if the path is invalid
-    pub fn new_from_path(path: &str) -> Self {
-        let file: Vec<u8> = std_read(path).unwrap();
-
-        Self::new(&file)
     }
 
     /// # Panics
@@ -439,6 +418,30 @@ impl SpudDecoder {
 
             Some(return_value)
         }
+    }
+}
+
+impl SpudDecoder {
+    #[cfg(feature = "async")]
+    #[must_use]
+    /// # Panics
+    ///
+    /// Will panic if the path is invalid
+    pub async fn new_from_path(path: &str) -> Self {
+        let file: Vec<u8> = tokio_read(path).await.unwrap();
+
+        Self::new(&file)
+    }
+
+    #[cfg(not(feature = "async"))]
+    #[must_use]
+    /// # Panics
+    ///
+    /// Will panic if the path is invalid
+    pub fn new_from_path(path: &str) -> Self {
+        let file: Vec<u8> = std_read(path).unwrap();
+
+        Self::new(&file)
     }
 
     #[cfg(feature = "async")]
