@@ -8,73 +8,122 @@ SPUD is a custom binary file format designed for efficient storage and transmiss
 * **Compact Binary Representation:** Uses binary encoding for data types.
 * **Basic Data Types:** Supports `null`, `boolean`, various integer (`i8`-`i64`, `u8`-`u64`) and float (`f32`, `f64`) types, strings, and raw binary blobs.
 * **Field Name Interning:** Assigns unique IDs to field names within a file to reduce redundancy and save space.
-* **Versioning:** Files start with a version identifier (`SPUD_VERSION` environment variable at compile time) to ensure compatibility.
+* **Versioning:** Files start with a version identifier (set at compile time) to ensure compatibility.
 * **Simple Structure:** Consists of a version header, a field name map, the data payload, and an End-Of-File marker (`[0xDE, 0xAD, 0xBE, 0xEF]`).
+* **Serde Integration:** Seamless conversion between Rust structs and the SPUD format via `serde`.
 
 ## File Structure
 
 A `.spud` file generally follows this structure:
 
-1.  **Version String:** The `SPUD_VERSION` string (bytes).
+1.  **Version String:** The version string (bytes).
 2.  **Field Name Map:**
     * A sequence of `(length_byte, field_name_bytes, id_byte)`.
     * Ends with the `FieldNameListEnd` marker (`0x01`).
 3.  **Data Payload:**
     * A sequence of `(FieldNameId_marker, field_id_byte, type_tag_byte, value_bytes)`.
     * String and BinaryBlob types include their length before the data.
+    * Arrays and Objects are delimited by `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags.
 4.  **EOF Marker:** The sequence `0xDE, 0xAD, 0xBE, 0xEF`.
 
 ## Usage
 
 ### Encoding (Creating a SPUD file)
 
+You can build SPUD files either manually or by serializing Rust structs with `serde`.
+
+#### Manual Usage
+
 ```rust
-// Example usage (assuming this code is within a function or main)
 use spud::spud_builder::SpudBuilder;
 
 let mut builder = SpudBuilder::new();
 
 builder
-    .add_string("name", "Example Object")
-    .add_number("version", 1u8) //
-    .add_bool("enabled", true) //
-    .add_null("description") //
-    .add_number("value", 123.45f64) //
-    .add_binary_blob("raw_data", &[0x01, 0x02, 0x03, 0x04]); //
+    .add_value("name", "Example Object")
+    .add_value("version", 1u8)
+    .add_value("enabled", true)
+    .add_value("description")
+    .add_value("value", 123.45f64)
+    .add_value("raw_data", &[0x01, 0x02, 0x03, 0x04]);
 
-// Specify the output directory and filename (without extension)
-builder.build_file("output_dir", "my_spud_data"); // Creates output_dir/my_spud_data.spud
+builder.build_file("output_dir", "my_spud_data");
 
 println!("SPUD file created!");
 ```
 
-### Decoding (Reading a SPUD file)
-
-The current decoder primarily prints the contents to standard output.
+#### Serde Usage
 
 ```rust
-// Example usage (assuming this code is within a function or main)
+use spud::spud_builder::SpudBuilder;
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct MyData {
+    name: String,
+    version: u8,
+    enabled: bool,
+    description: Option<String>,
+    value: f64,
+    raw_data: Vec<u8>,
+}
+
+let data = MyData {
+    name: "Example Object".to_string(),
+    version: 1,
+    enabled: true,
+    description: None,
+    value: 123.45,
+    raw_data: vec![0x01, 0x02, 0x03, 0x04],
+};
+
+let mut builder = SpudBuilder::from_serde(&data);
+builder.build_file("output_dir", "my_spud_data");
+```
+
+### Decoding (Reading a SPUD file)
+
+You can decode SPUD files manually or deserialize them into Rust structs with `serde`.
+
+#### Manual Usage
+
+```rust
 use spud::spud_decoder::SpudDecoder;
 
-// Load from a file path
-let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud"); //
-
-// Or load from an existing byte vector
-// let file_bytes: Vec<u8> = std::fs::read("output_dir/my_spud_data.spud").unwrap();
-// let mut decoder = SpudDecoder::new(file_bytes); //
+let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud");
 
 println!("Decoding SPUD file:");
-decoder.decode(); // Prints decoded key-value pairs
+decoder.decode();
 println!("Decoding finished.");
+```
+
+#### Serde Usage
+
+```rust
+use spud::spud_decoder::SpudDecoder;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct MyData {
+    name: String,
+    version: u8,
+    enabled: bool,
+    description: Option<String>,
+    value: f64,
+    raw_data: Vec<u8>,
+}
+
+let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud");
+let data: MyData = decoder.deserialize().unwrap();
 ```
 
 ## Roadmap / TODO
 
 Here are some planned features and improvements:
 
-* **[ ] Arrays and Objects:** Implement support for nested structures using the defined `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags. This will involve updating both the builder and decoder.
+* **[x] Arrays and Objects:** Support for nested structures using `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags.
 * **[ ] Improved Error Handling:** Replace `.unwrap()` and `panic!` calls in the decoder with proper `Result` types for robust error management. Define custom error types for different parsing issues.
-* **[x] `serde` Integration:** Implement `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder` to allow seamless conversion between Rust structs and the SPUD format.
+* **[x] `serde` Integration:** Implemented `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder`.
 * **[ ] Documentation:** Generate API documentation using `cargo doc`.
 * **[ ] More Types:** Support for timestamps, decimals, or other common data types if needed.
 
