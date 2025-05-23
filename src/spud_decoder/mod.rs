@@ -5,6 +5,7 @@ use std::{
     path::Path,
 };
 
+use indexmap::IndexMap;
 use serde_json::{Number, Value};
 
 #[cfg(feature = "async")]
@@ -25,7 +26,7 @@ use crate::spud_types::SpudTypes;
 pub struct SpudDecoder {
     file_contents: Vec<u8>,
     index: usize,
-    field_names: HashMap<String, u8>,
+    field_names: IndexMap<String, u8>,
     output: HashMap<String, Value>,
     current_byte: u8,
     current_field: String,
@@ -49,7 +50,7 @@ impl SpudDecoder {
 
         let mut file_contents: Vec<u8> = file_contents.to_vec();
 
-        let mut field_names: HashMap<String, u8> = HashMap::new();
+        let mut field_names: IndexMap<String, u8> = IndexMap::new();
 
         let field_name_list_end_byte_index: Option<usize> = file_contents
             .iter()

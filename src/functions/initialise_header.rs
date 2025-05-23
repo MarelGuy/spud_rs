@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use crate::spud_types::SpudTypes;
 
-pub(crate) fn initialise_header(field_names: &HashMap<(String, u8), u8>, data: &[u8]) -> Vec<u8> {
+pub(crate) fn initialise_header(field_names: &IndexMap<(String, u8), u8>, data: &[u8]) -> Vec<u8> {
     let mut header: Vec<u8> = env!("SPUD_VERSION").as_bytes().to_vec();
 
     for (name, id) in field_names {

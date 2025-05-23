@@ -1,4 +1,5 @@
 #![allow(clippy::needless_pass_by_value)]
+use indexmap::IndexMap;
 use spud_type_ext::SpudTypesExt;
 use std::{collections::HashMap, path::Path, process};
 
@@ -20,7 +21,7 @@ pub mod spud_type_ext;
 #[derive(Default, Debug, Clone)]
 pub struct SpudBuilder {
     pub data: Vec<u8>,
-    pub field_names: HashMap<(String, u8), u8>,
+    pub field_names: IndexMap<(String, u8), u8>,
     pub field_names_index: u8,
 }
 
@@ -31,7 +32,7 @@ impl SpudBuilder {
 
         let mut data: Vec<u8> = Vec::new();
 
-        let mut field_names: HashMap<(String, u8), u8> = HashMap::new();
+        let mut field_names: IndexMap<(String, u8), u8> = IndexMap::new();
         let field_names_index: u8 = 2;
 
         field_names.insert(("id".into(), 2), 2);
