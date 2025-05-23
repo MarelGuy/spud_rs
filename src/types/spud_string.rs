@@ -1,3 +1,5 @@
+use super::object_id::ObjectId;
+
 pub struct SpudString(pub String);
 
 impl From<&str> for SpudString {
@@ -15,5 +17,11 @@ impl From<String> for SpudString {
 impl From<&String> for SpudString {
     fn from(value: &String) -> Self {
         Self(value.clone())
+    }
+}
+
+impl From<ObjectId> for SpudString {
+    fn from(value: ObjectId) -> Self {
+        Self(bs58::encode(&value.0).into_string())
     }
 }

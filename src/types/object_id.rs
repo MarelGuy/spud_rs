@@ -4,6 +4,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use super::spud_string::SpudString;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct ObjectId(pub [u8; 10]);
 
@@ -51,6 +53,46 @@ impl ObjectId {
         let counter_bytes: [u8; 4] = counter_24bit.to_le_bytes();
 
         id[7..10].copy_from_slice(&counter_bytes[0..3]);
+
+        ObjectId(id)
+    }
+}
+
+impl ToString for ObjectId {
+    fn to_string(&self) -> String {
+        bs58::encode(&self.0).into_string()
+    }
+}
+
+impl From<&str> for ObjectId {
+    fn from(s: &str) -> Self {
+        let decoded: Vec<u8> = bs58::decode(s).into_vec().expect("Failed to decode base58");
+
+        ObjectId(decoded.try_into().expect("Invalid ObjectId length"))
+    }
+}
+impl From<String> for ObjectId {
+    fn from(s: String) -> Self {
+        let decoded: Vec<u8> = bs58::decode(s).into_vec().expect("Failed to decode base58");
+
+        ObjectId(decoded.try_into().expect("Invalid ObjectId length"))
+    }
+}
+impl From<[u8; 10]> for ObjectId {
+    fn from(bytes: [u8; 10]) -> Self {
+        ObjectId(bytes)
+    }
+}
+
+impl From<SpudString> for ObjectId {
+    fn from(value: SpudString) -> Self {
+        let decoded: Vec<u8> = bs58::decode(&value.0)
+            .into_vec()
+            .expect("Failed to decode base58");
+
+        let mut id: [u8; 10] = [0u8; 10];
+
+        id.copy_from_slice(&decoded);
 
         ObjectId(id)
     }
