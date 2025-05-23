@@ -1,4 +1,7 @@
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::{
+    fmt::Display,
+    sync::atomic::{AtomicU32, Ordering},
+};
 use std::{
     sync::LazyLock,
     time::{SystemTime, UNIX_EPOCH},
@@ -58,9 +61,9 @@ impl ObjectId {
     }
 }
 
-impl ToString for ObjectId {
-    fn to_string(&self) -> String {
-        bs58::encode(&self.0).into_string()
+impl Display for ObjectId {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}", bs58::encode(&self.0).into_string())
     }
 }
 
