@@ -1,7 +1,7 @@
 use crate::{
-    functions::add_value_len::add_value_length,
+    functions::add_value_length,
     spud_types::SpudTypes,
-    types::{binary_blob::BinaryBlob as BinaryBlobStruct, spud_string::SpudString},
+    types::{BinaryBlob as BinaryBlobStruct, SpudString},
 };
 
 trait SpudPrimitiveWriter {

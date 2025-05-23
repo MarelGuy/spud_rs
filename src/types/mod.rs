@@ -1,3 +1,7 @@
-pub mod binary_blob;
-pub mod object_id;
-pub mod spud_string;
+mod binary_blob;
+mod object_id;
+mod spud_string;
+
+pub use binary_blob::BinaryBlob;
+pub use object_id::ObjectId;
+pub use spud_string::SpudString;

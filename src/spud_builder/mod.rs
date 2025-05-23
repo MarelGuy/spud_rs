@@ -1,16 +1,17 @@
 #![allow(clippy::needless_pass_by_value)]
+
+mod spud_type_ext;
+
+pub(crate) use spud_type_ext::SpudTypesExt;
+
 use core::panic;
 use indexmap::IndexMap;
-use spud_type_ext::SpudTypesExt;
 use std::{path::Path, process};
 
 use crate::{
-    functions::{
-        check_path::check_path,
-        generate_u8_id::{self},
-        initialise_header::initialise_header,
-    },
-    types::object_id::ObjectId,
+    functions::{check_path, generate_u8_id, initialise_header},
+    spud_types::SpudTypes,
+    types::ObjectId,
 };
 
 #[cfg(feature = "async")]
@@ -18,10 +19,6 @@ use tokio::fs::write;
 
 #[cfg(not(feature = "async"))]
 use std::fs;
-
-use crate::spud_types::SpudTypes;
-
-pub mod spud_type_ext;
 
 #[derive(Default, Debug, Clone)]
 pub struct SpudBuilder {
@@ -98,7 +95,7 @@ impl SpudBuilder {
         let id: u8 = if let Some(value) = self.field_names.get(&key) {
             *value
         } else {
-            let id: u8 = generate_u8_id::generate_u8_id(&mut self.seen_ids);
+            let id: u8 = generate_u8_id(&mut self.seen_ids);
 
             self.field_names.insert(key, id);
             id
@@ -122,7 +119,7 @@ impl SpudBuilder {
         let id: u8 = if let Some(value) = field_names.get(&key) {
             *value
         } else {
-            let id: u8 = generate_u8_id::generate_u8_id(seen_ids);
+            let id: u8 = generate_u8_id(seen_ids);
 
             field_names.insert(key, id);
 
@@ -137,20 +134,6 @@ impl SpudBuilder {
 
         oid
     }
-
-    // pub fn add_object(&mut self, field_name: &str, value: &mut SpudBuilder) -> &mut Self {
-    //     self.add_field_name(field_name);
-
-    //     self.data().push(SpudTypes::ObjectStart as u8);
-
-    //     self.field_names().extend(value.field_names().clone());
-
-    //     self.data().extend(value.data().clone());
-
-    //     self.data().push(SpudTypes::ObjectEnd as u8);
-
-    //     todo!();
-    // }
 
     pub fn add_value<T: SpudTypesExt>(&mut self, field_name: &str, value: T) -> &mut Self {
         self.add_field_name(field_name);
