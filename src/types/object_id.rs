@@ -9,7 +9,7 @@ use std::{
 
 use super::spud_string::SpudString;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct ObjectId(pub [u8; 10]);
 
 static INSTANCE_IDENTIFIER: LazyLock<[u8; 3]> = LazyLock::new(|| {

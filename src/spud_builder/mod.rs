@@ -1,10 +1,15 @@
 #![allow(clippy::needless_pass_by_value)]
+use core::panic;
 use indexmap::IndexMap;
 use spud_type_ext::SpudTypesExt;
-use std::{collections::HashMap, path::Path, process};
+use std::{path::Path, process};
 
 use crate::{
-    functions::{check_path::check_path, initialise_header::initialise_header},
+    functions::{
+        check_path::check_path,
+        generate_u8_id::{self},
+        initialise_header::initialise_header,
+    },
     types::object_id::ObjectId,
 };
 
@@ -20,34 +25,71 @@ pub mod spud_type_ext;
 
 #[derive(Default, Debug, Clone)]
 pub struct SpudBuilder {
-    pub data: Vec<u8>,
-    pub field_names: IndexMap<(String, u8), u8>,
-    pub field_names_index: u8,
+    oid: ObjectId,
+    data: Vec<u8>,
+    field_names: IndexMap<(String, u8), u8>,
+    seen_ids: Vec<bool>,
+    assigned_objects: Vec<ObjectId>,
 }
 
 impl SpudBuilder {
     #[must_use]
     pub fn new() -> Self {
-        let id: [u8; 10] = ObjectId::new().0;
-
         let mut data: Vec<u8> = Vec::new();
-
         let mut field_names: IndexMap<(String, u8), u8> = IndexMap::new();
-        let field_names_index: u8 = 2;
+        let mut seen_ids: Vec<bool> = vec![false; 256];
 
-        field_names.insert(("id".into(), 2), 2);
-
-        data.push(SpudTypes::FieldNameId as u8);
-        data.push(2);
-
-        data.push(SpudTypes::ObjectId as u8);
-        data.extend_from_slice(&id);
+        let oid: ObjectId = Self::generate_oid(&mut seen_ids, &mut field_names, &mut data);
 
         Self {
+            oid,
             data,
             field_names,
-            field_names_index,
+            seen_ids,
+            assigned_objects: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn as_inner_object_for(main_object: &mut SpudBuilder) -> Self {
+        let mut data: Vec<u8> = vec![SpudTypes::ObjectStart as u8];
+        let mut field_names: IndexMap<(String, u8), u8> = main_object.field_names.clone();
+        let mut seen_ids: Vec<bool> = main_object.seen_ids.clone();
+
+        let oid: ObjectId = Self::generate_oid(&mut seen_ids, &mut field_names, &mut data);
+
+        main_object.assigned_objects.push(oid.clone());
+
+        Self {
+            oid,
+            data,
+            field_names,
+            seen_ids,
+            assigned_objects: Vec::new(),
+        }
+    }
+
+    /// # Panics
+    ///
+    /// Will panic if the object was not created from the object
+    pub fn add_object(&mut self, field_name: &str, object: &mut SpudBuilder) {
+        if !self.assigned_objects.contains(&object.oid) {
+            tracing::error!(
+                "You didn't create the object with OID \"{}\" from the object with the OID: \"{}\"",
+                object.oid,
+                self.oid
+            );
+            panic!("Closing...");
+        }
+
+        self.add_field_name(field_name);
+
+        object.data.push(SpudTypes::ObjectEnd as u8);
+
+        self.data.extend(object.data.clone());
+
+        self.field_names.extend(object.field_names.clone());
+        self.seen_ids.extend(object.seen_ids.clone());
     }
 
     fn add_field_name(&mut self, field_name: &str) -> &mut Self {
@@ -56,9 +98,10 @@ impl SpudBuilder {
         let id: u8 = if let Some(value) = self.field_names.get(&key) {
             *value
         } else {
-            self.field_names_index += 1;
-            self.field_names.insert(key, self.field_names_index);
-            self.field_names_index
+            let id: u8 = generate_u8_id::generate_u8_id(&mut self.seen_ids);
+
+            self.field_names.insert(key, id);
+            id
         };
 
         self.data.push(SpudTypes::FieldNameId as u8);
@@ -67,12 +110,46 @@ impl SpudBuilder {
         self
     }
 
-    // pub fn add_object(&mut self, field_name: &str, value: SpudBuilder) -> &mut Self {
+    fn generate_oid(
+        seen_ids: &mut Vec<bool>,
+        field_names: &mut IndexMap<(String, u8), u8>,
+        data: &mut Vec<u8>,
+    ) -> ObjectId {
+        let oid: ObjectId = ObjectId::new();
+
+        let key: (String, u8) = ("id".into(), 2);
+
+        let id: u8 = if let Some(value) = field_names.get(&key) {
+            *value
+        } else {
+            let id: u8 = generate_u8_id::generate_u8_id(seen_ids);
+
+            field_names.insert(key, id);
+
+            id
+        };
+
+        data.push(SpudTypes::FieldNameId as u8);
+        data.push(id);
+
+        data.push(SpudTypes::ObjectId as u8);
+        data.extend_from_slice(&oid.0);
+
+        oid
+    }
+
+    // pub fn add_object(&mut self, field_name: &str, value: &mut SpudBuilder) -> &mut Self {
     //     self.add_field_name(field_name);
 
-    //     self.data.push(SpudTypes::ObjectStart as u8);
+    //     self.data().push(SpudTypes::ObjectStart as u8);
 
-    //     self
+    //     self.field_names().extend(value.field_names().clone());
+
+    //     self.data().extend(value.data().clone());
+
+    //     self.data().push(SpudTypes::ObjectEnd as u8);
+
+    //     todo!();
     // }
 
     pub fn add_value<T: SpudTypesExt>(&mut self, field_name: &str, value: T) -> &mut Self {

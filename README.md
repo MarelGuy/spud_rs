@@ -121,11 +121,20 @@ let data: MyData = decoder.deserialize().unwrap();
 
 Here are some planned features and improvements:
 
-* **[\\] Arrays and Objects:** Support for nested structures using `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags.
-* **[ ] Improved Error Handling:** Replace `.unwrap()` and `panic!` calls in the decoder with proper `Result` types for robust error management. Define custom error types for different parsing issues.
+* **[x] Arrays and Objects:** Support for nested structures using `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags.
+* **[x] Improved Error Handling:** Replace `.unwrap()` and `panic!` calls in the decoder with proper `Result` types for robust error management. Define custom error types for different parsing issues.
 * **[x] `serde` Integration:** Implemented `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder`.
 * **[ ] Documentation:** Generate API documentation using `cargo doc`.
 * **[ ] More Types:** Support for timestamps, decimals, or other common data types if needed.
+* **[ ] Add support for multiple objects in a single file:** Currently, one can only add 1 object per file, my goal is to change and make files with multiple objects.
+
+## Known bugs
+
+There are some bugs that are yet to be fixed:
+ * **Order of field:** Even if i'm using an IndexMap to order the fields, the order is still not correct
+ * **Field names:** Field names that are reused, especially in nested objects, tend to break the decoder
+ * **Random field names in nested objects:** For some reason, the field name of the nested object might appear in the nested object itself with one of it's value
+ * **Serde integration:** Serde integration is not fully finished yet
 
 ## Contributing
 

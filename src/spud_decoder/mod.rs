@@ -6,7 +6,7 @@ use std::{
 };
 
 use indexmap::IndexMap;
-use serde_json::{Number, Value};
+use serde_json::{Map, Number, Value};
 
 #[cfg(feature = "async")]
 use tokio::{
@@ -417,6 +417,39 @@ impl SpudDecoder {
                     next_steps = 1;
 
                     Value::Array(output_array)
+                }
+                Some(SpudTypes::ObjectStart) => {
+                    self.next(1).unwrap();
+
+                    let mut output_object: Map<String, Value> = Map::new();
+
+                    let parent_field: String = self.current_field.clone();
+
+                    loop {
+                        let bit: Option<SpudTypes> =
+                            SpudTypes::from_u8(self.file_contents[self.index]);
+
+                        if bit == Some(SpudTypes::ObjectEnd) {
+                            break;
+                        }
+
+                        let decoded_bit: Option<Value> =
+                            self.decode_bit(self.file_contents[self.index]);
+
+                        if let Some(value) = decoded_bit {
+                            output_object.insert(self.current_field.clone(), value);
+                        }
+
+                        if self.check_end(0) {
+                            break;
+                        }
+                    }
+
+                    next_steps = 1;
+
+                    self.current_field = parent_field;
+
+                    Value::Object(output_object)
                 }
                 _ => {
                     tracing::error!("Unknown type: {bit} at index {}", self.index);
