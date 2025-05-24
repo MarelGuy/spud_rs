@@ -540,3 +540,13 @@ impl SpudDecoder {
         }
     }
 }
+
+#[cfg(feature = "serde")]
+impl SpudDecoder {
+    /// # Errors
+    ///
+    /// Will return an error if the deserialization fails
+    pub fn deserialize<T: serde::de::DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
+        serde_json::from_str(&self.output_json)
+    }
+}
