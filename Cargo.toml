@@ -23,8 +23,6 @@ tempfile = "3.20.0"
 
 [features]
 default = []
-
-hashmap = []
 async = ["dep:tokio"]
 serde = ["dep:serde"]
-full = ["async", "serde", "hashmap"]
+full = ["async", "serde"]

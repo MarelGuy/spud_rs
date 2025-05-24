@@ -179,31 +179,3 @@ impl SpudBuilder {
         fs::write(path, header).unwrap();
     }
 }
-
-#[cfg(feature = "hashmap")]
-impl SpudBuilder {
-    pub(crate) fn add_hash_value(
-        &mut self,
-        field_name: &str,
-        value: &dyn SpudTypesExt,
-    ) -> &mut Self {
-        self.add_field_name(field_name);
-
-        value.write_spud_bytes(&mut self.data);
-
-        self
-    }
-}
-
-#[cfg(feature = "hashmap")]
-impl From<HashMap<String, Box<dyn SpudTypesExt>>> for SpudBuilder {
-    fn from(map: HashMap<String, Box<dyn SpudTypesExt>>) -> Self {
-        let mut builder = SpudBuilder::new();
-
-        for (key, value) in map {
-            builder.add_hash_value(&key, &*value);
-        }
-
-        builder
-    }
-}
