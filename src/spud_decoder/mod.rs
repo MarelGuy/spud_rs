@@ -25,9 +25,10 @@ use crate::spud_types::SpudTypes;
 #[derive(Default, Debug, Clone)]
 pub struct SpudDecoder {
     file_contents: Vec<u8>,
+    current_object: Vec<u8>,
     index: usize,
-    field_names: IndexMap<String, u8>,
-    output: HashMap<String, Value>,
+    field_names: IndexMap<u8, String>,
+    output: Vec<HashMap<String, Value>>,
     current_byte: u8,
     current_field: String,
     output_json: String,
@@ -50,7 +51,7 @@ impl SpudDecoder {
 
         let mut file_contents: Vec<u8> = file_contents.to_vec();
 
-        let mut field_names: IndexMap<String, u8> = IndexMap::new();
+        let mut field_names: IndexMap<u8, String> = IndexMap::new();
 
         let field_name_list_end_byte_index: Option<usize> = file_contents
             .iter()
@@ -80,7 +81,7 @@ impl SpudDecoder {
 
                     cursor += 1;
 
-                    field_names.insert(String::from_utf8(field_name).unwrap(), field_id);
+                    field_names.insert(field_id, String::from_utf8(field_name).unwrap());
 
                     if field_names_bytes[cursor] == SpudTypes::FieldNameListEnd as u8 {
                         break;
@@ -96,67 +97,128 @@ impl SpudDecoder {
             file_contents,
             index: 0,
             field_names,
-            output: HashMap::new(),
+            output: Vec::new(),
             current_byte: 0,
             current_field: String::new(),
+            current_object: Vec::new(),
             output_json: String::new(),
         }
     }
 
     /// # Panics
     ///
+    /// Panics if serde fails to serialize the file
+    pub fn decode(&mut self, pretty: bool, want_array: bool) -> &str {
+        let objects: Vec<Vec<u8>> = self.get_objects();
+
+        for object in objects {
+            self.current_object = object;
+            self.index = 0;
+            self.current_field.clear();
+
+            let decoded_object: HashMap<String, Value> = self.decode_object();
+            self.output.push(decoded_object);
+        }
+
+        if self.output.len() == 1 && !want_array {
+            let single_object = &self.output[0];
+            self.output_json = if pretty {
+                serde_json::to_string_pretty(single_object).unwrap()
+            } else {
+                serde_json::to_string(single_object).unwrap()
+            };
+        } else {
+            self.output_json = if pretty {
+                serde_json::to_string_pretty(&self.output).unwrap()
+            } else {
+                serde_json::to_string(&self.output).unwrap()
+            };
+        }
+
+        self.output_json.as_str()
+    }
+
+    fn decode_object(&mut self) -> HashMap<String, Value> {
+        let mut object: HashMap<String, Value> = HashMap::new();
+
+        self.next(2).unwrap();
+
+        let id: Vec<u8> = self.read_bytes(10);
+
+        let object_id: String = bs58::encode(&id).into_string();
+        object.insert("oid".to_string(), Value::String(object_id));
+
+        while self.index < self.current_object.len() {
+            if self.current_byte == SpudTypes::ObjectEnd as u8 {
+                break;
+            }
+
+            let field_value: Option<Value> = self.decode_byte(self.current_byte);
+
+            if let Some(value) = field_value {
+                object.insert(self.current_field.clone(), value);
+            }
+        }
+
+        object
+    }
+
+    /// # Panics
+    ///
     /// Will panic if the index is out of bounds
     fn next(&mut self, steps: usize) -> Result<(), ()> {
-        if self.index + steps >= self.file_contents.len() {
-            println!("Index out of bounds, decoding failed.");
+        if self.index + steps >= self.current_object.len() {
+            tracing::error!("Index out of bounds, decoding failed.");
 
             return Err(());
         }
 
         self.index += steps;
 
-        self.current_byte = self.file_contents[self.index];
+        self.current_byte = self.current_object[self.index];
 
         Ok(())
     }
 
-    fn peek(&self, steps: usize) -> Option<u8> {
-        if self.index + steps >= self.file_contents.len() {
-            None
-        } else {
-            Some(self.file_contents[self.index + steps])
-        }
-    }
-
     fn read_bytes(&mut self, steps: usize) -> Vec<u8> {
-        let result: Vec<u8> = self.file_contents[self.index..self.index + steps].to_vec();
+        let result: Vec<u8> = self.current_object[self.index..self.index + steps].to_vec();
 
         self.next(steps).unwrap();
 
         result
     }
 
-    fn check_end(&self, buffer: usize) -> bool {
-        self.peek(buffer) == Some(0xDE)
-            && self.peek(1 + buffer) == Some(0xAD)
-            && self.peek(2 + buffer) == Some(0xBE)
-            && self.peek(3 + buffer) == Some(0xEF)
+    fn get_objects(&self) -> Vec<Vec<u8>> {
+        let mut objects: Vec<Vec<u8>> = vec![];
+
+        let mut current_object: Vec<u8> = vec![];
+
+        let mut old_byte: u8 = 0;
+
+        for byte in &self.file_contents {
+            if *byte == SpudTypes::ObjectStart as u8 && old_byte == SpudTypes::ObjectStart as u8 {
+                current_object.clear();
+            }
+
+            if *byte == SpudTypes::ObjectEnd as u8 && old_byte == SpudTypes::ObjectEnd as u8 {
+                current_object.push(*byte);
+                objects.push(current_object.clone());
+            } else {
+                current_object.push(*byte);
+            }
+
+            old_byte = *byte;
+        }
+
+        objects
     }
 
     fn read_field_name(&mut self) -> usize {
         self.next(1).unwrap();
 
-        let field_name_id: u8 = self.file_contents[self.index];
+        let field_name_id: u8 = self.current_object[self.index];
 
-        let field_name: String = self
-            .field_names
-            .iter()
-            .find(|x| x.1 == &field_name_id)
-            .unwrap()
-            .0
-            .clone();
-
-        self.current_field = field_name;
+        self.current_field = self.field_names.get(&field_name_id).cloned().unwrap();
 
         1
     }
@@ -188,49 +250,11 @@ impl SpudDecoder {
         }
     }
 
-    fn insert_value(&mut self, value: Value) {
-        self.output.insert(self.current_field.clone(), value);
-    }
-
-    /// # Panics
-    ///
-    /// Panics if serde fails to serialize the file
-    pub fn decode(&mut self, pretty: bool) -> &str {
-        loop {
-            let bit: Option<Value> = self.decode_bit(self.file_contents[self.index]);
-
-            if let Some(value) = bit {
-                self.insert_value(value);
-            }
-
-            if self.check_end(0) {
-                let output_json: Result<String, serde_json::Error> = if pretty {
-                    serde_json::to_string_pretty(&self.output)
-                } else {
-                    serde_json::to_string(&self.output)
-                };
-
-                let output: String = match output_json {
-                    Ok(output) => output,
-
-                    Err(err) => {
-                        tracing::error!("Error decoding output: {}", err);
-                        panic!("Closing...");
-                    }
-                };
-
-                self.output_json = output;
-
-                return &self.output_json;
-            }
-        }
-    }
-
     /// # Panics
     ///
     /// Will panic on unknown type
-    fn decode_bit(&mut self, bit: u8) -> Option<Value> {
-        let decode_result: Option<SpudTypes> = SpudTypes::from_u8(bit);
+    fn decode_byte(&mut self, byte: u8) -> Option<Value> {
+        let decode_result: Option<SpudTypes> = SpudTypes::from_u8(byte);
 
         let mut next_steps: usize = 0;
 
@@ -242,15 +266,6 @@ impl SpudDecoder {
             None
         } else {
             let return_value: Value = match decode_result {
-                Some(SpudTypes::ObjectId) => {
-                    self.next(1).unwrap();
-
-                    let read_bytes: Vec<u8> = self.read_bytes(10);
-
-                    let object_id: String = bs58::encode(&read_bytes).into_string();
-
-                    Value::String(object_id)
-                }
                 Some(SpudTypes::Null) => {
                     next_steps = 1;
 
@@ -259,10 +274,10 @@ impl SpudDecoder {
                 Some(SpudTypes::Bool) => {
                     self.next(1).unwrap();
 
-                    let value: Value = match self.file_contents.get(self.index) {
+                    let value: Value = match self.current_object.get(self.index) {
                         Some(0) => Value::Bool(false),
                         Some(1) => Value::Bool(true),
-                        _ => panic!("Unknown bool value: {}", self.file_contents[self.index]),
+                        _ => panic!("Unknown bool value: {}", self.current_object[self.index]),
                     };
 
                     next_steps = 1;
@@ -368,7 +383,7 @@ impl SpudDecoder {
 
                     Value::String(
                         String::from_utf8(
-                            self.file_contents[self.index..self.index + string_len].to_vec(),
+                            self.current_object[self.index..self.index + string_len].to_vec(),
                         )
                         .unwrap(),
                     )
@@ -377,12 +392,12 @@ impl SpudDecoder {
                     let blob_len: usize = self.read_variable_length_data();
 
                     let processed: Vec<u8> =
-                        self.file_contents[self.index..self.index + blob_len].to_vec();
+                        self.current_object[self.index..self.index + blob_len].to_vec();
 
                     let mut output_array: Vec<Value> = vec![];
 
-                    for processed_bit in &processed {
-                        output_array.push(Value::Number(Number::from(*processed_bit)));
+                    for processed_byte in &processed {
+                        output_array.push(Value::Number(Number::from(*processed_byte)));
                     }
 
                     next_steps = blob_len;
@@ -395,22 +410,18 @@ impl SpudDecoder {
                     let mut output_array: Vec<Value> = vec![];
 
                     loop {
-                        let bit: Option<SpudTypes> =
-                            SpudTypes::from_u8(self.file_contents[self.index]);
+                        let byte: Option<SpudTypes> =
+                            SpudTypes::from_u8(self.current_object[self.index]);
 
-                        if bit == Some(SpudTypes::ArrayEnd) {
+                        if byte == Some(SpudTypes::ArrayEnd) {
                             break;
                         }
 
-                        let decoded_bit: Option<Value> =
-                            self.decode_bit(self.file_contents[self.index]);
+                        let decoded_byte: Option<Value> =
+                            self.decode_byte(self.current_object[self.index]);
 
-                        if let Some(value) = decoded_bit {
+                        if let Some(value) = decoded_byte {
                             output_array.push(value);
-                        }
-
-                        if self.check_end(0) {
-                            break;
                         }
                     }
 
@@ -426,22 +437,18 @@ impl SpudDecoder {
                     let parent_field: String = self.current_field.clone();
 
                     loop {
-                        let bit: Option<SpudTypes> =
-                            SpudTypes::from_u8(self.file_contents[self.index]);
+                        let byte: Option<SpudTypes> =
+                            SpudTypes::from_u8(self.current_object[self.index]);
 
-                        if bit == Some(SpudTypes::ObjectEnd) {
+                        if byte == Some(SpudTypes::ObjectEnd) {
                             break;
                         }
 
-                        let decoded_bit: Option<Value> =
-                            self.decode_bit(self.file_contents[self.index]);
+                        let decoded_byte: Option<Value> =
+                            self.decode_byte(self.current_object[self.index]);
 
-                        if let Some(value) = decoded_bit {
+                        if let Some(value) = decoded_byte {
                             output_object.insert(self.current_field.clone(), value);
-                        }
-
-                        if self.check_end(0) {
-                            break;
                         }
                     }
 
@@ -452,7 +459,7 @@ impl SpudDecoder {
                     Value::Object(output_object)
                 }
                 _ => {
-                    tracing::error!("Unknown type: {bit} at index {}", self.index);
+                    tracing::error!("Unknown type: {byte} at index {}", self.index);
 
                     panic!("Closing...");
                 }

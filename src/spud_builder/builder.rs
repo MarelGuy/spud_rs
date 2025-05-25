@@ -1,11 +1,11 @@
 #![allow(clippy::needless_pass_by_value)]
 
-use core::panic;
+use core::cell::RefCell;
 use indexmap::IndexMap;
-use std::{path::Path, process};
+use std::{collections::HashMap, fmt, path::Path, process, rc::Rc};
 
 use crate::{
-    functions::{check_path, generate_u8_id, initialise_header},
+    functions::{check_path, initialise_header},
     spud_types::SpudTypes,
     types::ObjectId,
 };
@@ -19,129 +19,80 @@ use std::fs;
 #[cfg(feature = "serde")]
 use super::SpudSerializer;
 
-use super::SpudTypesExt;
+use super::SpudObject;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Clone)]
+pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Rc<RefCell<Vec<u8>>>>);
+
+#[derive(Default, Clone)]
 pub struct SpudBuilder {
-    oid: ObjectId,
-    data: Vec<u8>,
-    field_names: IndexMap<(String, u8), u8>,
-    seen_ids: Vec<bool>,
-    assigned_objects: Vec<ObjectId>,
+    pub(crate) field_names: Rc<RefCell<IndexMap<(String, u8), u8>>>,
+    pub(crate) data: Rc<RefCell<Vec<u8>>>,
+    pub(crate) objects: Rc<RefCell<ObjectMap>>,
+    pub(crate) seen_ids: Rc<RefCell<Vec<bool>>>,
 }
 
 impl SpudBuilder {
     #[must_use]
     pub fn new() -> Self {
-        let mut data: Vec<u8> = Vec::new();
-        let mut field_names: IndexMap<(String, u8), u8> = IndexMap::new();
-        let mut seen_ids: Vec<bool> = vec![false; 256];
-
-        let oid: ObjectId = Self::generate_oid(&mut seen_ids, &mut field_names, &mut data);
-
         Self {
-            oid,
-            data,
-            field_names,
-            seen_ids,
-            assigned_objects: Vec::new(),
+            data: Rc::new(RefCell::new(Vec::new())),
+            field_names: Rc::new(RefCell::new(IndexMap::new())),
+            objects: Rc::new(RefCell::new(ObjectMap(IndexMap::new()))),
+            seen_ids: Rc::new(RefCell::new(vec![false; 256])),
         }
     }
 
     #[must_use]
-    pub fn as_inner_object_for(main_object: &mut SpudBuilder) -> Self {
-        let mut data: Vec<u8> = vec![SpudTypes::ObjectStart as u8];
-        let mut field_names: IndexMap<(String, u8), u8> = main_object.field_names.clone();
-        let mut seen_ids: Vec<bool> = main_object.seen_ids.clone();
+    pub fn new_object(&self) -> SpudObject {
+        SpudObject::new(
+            Rc::clone(&self.field_names),
+            Rc::clone(&self.seen_ids),
+            Rc::clone(&self.objects),
+        )
+    }
 
-        let oid: ObjectId = Self::generate_oid(&mut seen_ids, &mut field_names, &mut data);
+    pub fn encode(&mut self) {
+        for object in self.objects.borrow().0.values() {
+            self.data.borrow_mut().extend_from_slice(&object.borrow());
 
-        main_object.assigned_objects.push(oid.clone());
-
-        Self {
-            oid,
-            data,
-            field_names,
-            seen_ids,
-            assigned_objects: Vec::new(),
+            self.data
+                .borrow_mut()
+                .extend_from_slice(&[SpudTypes::ObjectEnd as u8, SpudTypes::ObjectEnd as u8]);
         }
     }
+}
 
-    /// # Panics
-    ///
-    /// Will panic if the object was not created from the object
-    pub fn add_object(&mut self, field_name: &str, object: &mut SpudBuilder) {
-        if !self.assigned_objects.contains(&object.oid) {
-            tracing::error!(
-                "You didn't create the object with OID \"{}\" from the object with the OID: \"{}\"",
-                object.oid,
-                self.oid
-            );
-            panic!("Closing...");
+impl fmt::Debug for SpudBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_builder: fmt::DebugStruct<'_, '_> = f.debug_struct("SpudBuilder");
+
+        debug_builder.field("field_names", &self.field_names.borrow());
+        debug_builder.field("data", &self.data.borrow());
+        debug_builder.field("objects", &self.objects.borrow());
+
+        let mut seen_ids_to_display = HashMap::new();
+
+        for (index, &is_seen) in self.seen_ids.borrow().iter().enumerate() {
+            if is_seen {
+                seen_ids_to_display.insert(index, true);
+            }
+        }
+        debug_builder.field("seen_ids", &seen_ids_to_display);
+
+        debug_builder.finish()
+    }
+}
+
+impl fmt::Debug for ObjectMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_map: fmt::DebugMap<'_, '_> = f.debug_map();
+
+        for (key, value) in &self.0 {
+            debug_map.entry(&key, &value.borrow());
         }
 
-        self.add_field_name(field_name);
-
-        object.data.push(SpudTypes::ObjectEnd as u8);
-
-        self.data.extend(object.data.clone());
-
-        self.field_names.extend(object.field_names.clone());
-        self.seen_ids.extend(object.seen_ids.clone());
-    }
-
-    fn add_field_name(&mut self, field_name: &str) -> &mut Self {
-        let key: (String, u8) = (field_name.into(), u8::try_from(field_name.len()).unwrap());
-
-        let id: u8 = if let Some(value) = self.field_names.get(&key) {
-            *value
-        } else {
-            let id: u8 = generate_u8_id(&mut self.seen_ids);
-
-            self.field_names.insert(key, id);
-            id
-        };
-
-        self.data.push(SpudTypes::FieldNameId as u8);
-        self.data.push(id);
-
-        self
-    }
-
-    fn generate_oid(
-        seen_ids: &mut Vec<bool>,
-        field_names: &mut IndexMap<(String, u8), u8>,
-        data: &mut Vec<u8>,
-    ) -> ObjectId {
-        let oid: ObjectId = ObjectId::new();
-
-        let key: (String, u8) = ("id".into(), 2);
-
-        let id: u8 = if let Some(value) = field_names.get(&key) {
-            *value
-        } else {
-            let id: u8 = generate_u8_id(seen_ids);
-
-            field_names.insert(key, id);
-
-            id
-        };
-
-        data.push(SpudTypes::FieldNameId as u8);
-        data.push(id);
-
-        data.push(SpudTypes::ObjectId as u8);
-        data.extend_from_slice(&oid.0);
-
-        oid
-    }
-
-    pub fn add_value<T: SpudTypesExt>(&mut self, field_name: &str, value: T) -> &mut Self {
-        self.add_field_name(field_name);
-
-        value.write_spud_bytes(&mut self.data);
-
-        self
+        debug_map.finish()
     }
 }
 
@@ -158,7 +109,7 @@ impl SpudBuilder {
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> = initialise_header(&self.field_names, &self.data);
+        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow());
 
         write(path, header).await.unwrap();
     }

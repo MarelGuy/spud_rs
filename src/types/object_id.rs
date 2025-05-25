@@ -3,13 +3,14 @@ use core::{
     sync::atomic::{AtomicU32, Ordering},
 };
 use std::{
+    fmt,
     sync::LazyLock,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use super::spud_string::SpudString;
 
-#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct ObjectId(pub [u8; 10]);
 
 static INSTANCE_IDENTIFIER: LazyLock<[u8; 3]> = LazyLock::new(|| {
@@ -98,5 +99,11 @@ impl From<SpudString> for ObjectId {
         id.copy_from_slice(&decoded);
 
         ObjectId(id)
+    }
+}
+
+impl fmt::Debug for ObjectId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ObjectId({self})")
     }
 }
