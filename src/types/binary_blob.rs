@@ -1,6 +1,6 @@
+/// Struct representing a binary blob for SPUD encoding.
 pub struct BinaryBlob<'a>(pub &'a [u8]);
 
-/// Struct representing a binary blob for SPUD encoding.
 impl<'a> BinaryBlob<'a> {
     #[must_use]
     pub fn new(value: &'a [u8]) -> Self {

@@ -24,7 +24,7 @@ use super::SpudObject;
 #[derive(Default, Clone)]
 pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Rc<RefCell<Vec<u8>>>>);
 
-/// Represents a builder for creating SPUD (Serialized Persistent User Data) objects.
+/// Represents a builder for creating SPUD objects.
 ///
 /// This builder allows you to create and manage SPUD objects, encode them into a byte vector, and write them to a file.
 ///

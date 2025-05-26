@@ -15,8 +15,8 @@ use super::spud_string::SpudString;
 /// - 4 bytes for the timestamp (seconds since UNIX epoch)
 /// - 3 bytes for a unique instance identifier
 /// - 3 bytes for a counter that increments with each new `ObjectId` generated.
-/// The `ObjectId` is designed to be unique across different instances and time, ensuring that each object can be distinctly identified.
-/// The default display format is a base58-encoded string representation of the identifier.
+///   The `ObjectId` is designed to be unique across different instances and time, ensuring that each object can be distinctly identified.
+///   The default display format is a base58-encoded string representation of the identifier.
 #[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct ObjectId(pub(crate) [u8; 10]);
 

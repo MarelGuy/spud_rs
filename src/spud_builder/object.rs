@@ -8,6 +8,8 @@ use crate::{functions::generate_u8_id, spud_types::SpudTypes, types::ObjectId};
 
 use super::{SpudTypesExt, builder::ObjectMap};
 
+/// Represents a SPUD object, which is a collection of fields and values.
+/// It allows adding values to fields and manages the internal data structure for SPUD encoding.
 #[derive(Debug)]
 pub struct SpudObject {
     pub(crate) _oid: ObjectId,

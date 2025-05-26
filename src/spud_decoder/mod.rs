@@ -22,6 +22,7 @@ use std::{
 
 use crate::spud_types::SpudTypes;
 
+/// The `SpudDecoder` is responsible for decoding SPUD files into a JSON format.
 #[derive(Default, Debug, Clone)]
 pub struct SpudDecoder {
     file_contents: Vec<u8>,
