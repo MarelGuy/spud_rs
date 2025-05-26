@@ -1,7 +1,14 @@
 [package]
-name = "spud"
-version = "0.1.0"
 edition = "2024"
+authors = ["Loris Cuntreri <irertnuc.loris@gmail.com>"]
+name = "spud_rs"
+version = "0.1.0"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/MarelGuy/spud_rs"
+readme = "README.md"
+documentation = "https://docs.rs/spud-rs"
+keywords = ["binary", "format", "parser", "spud"]
+categories = ["parser-implementations", "filesystem"]
 
 [dependencies]
 chrono = { version = "0.4.41", default-features = false, features = ["clock"] }
@@ -11,7 +18,7 @@ tracing = "0.1.41"
 bs58 = "0.5.1"
 indexmap = "2.9.0"
 
-tokio = { version = "1.45.0", features = [
+tokio = { version = "1.45.1", features = [
     "rt-multi-thread",
     "fs",
     "io-util",
