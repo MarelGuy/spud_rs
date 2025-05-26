@@ -121,12 +121,8 @@ let data: MyData = decoder.deserialize().unwrap();
 
 Here are some planned features and improvements:
 
-* **[x] Arrays and Objects:** Support for nested structures using `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags.
-* **[x] Improved Error Handling:** Replace `.unwrap()` and `panic!` calls in the decoder with proper `Result` types for robust error management. Define custom error types for different parsing issues.
 * **[ ] `serde` Integration:** Implemented `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder`.
-* **[ ] Documentation:** Generate API documentation using `cargo doc`.
 * **[ ] More Types:** Support for timestamps, decimals, or other common data types if needed.
-* **[x] Add support for multiple objects in a single file:** Currently, one can only add 1 object per file, my goal is to change and make files with multiple objects.
 
 ## Known bugs
 
