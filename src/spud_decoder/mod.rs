@@ -41,7 +41,7 @@ impl SpudDecoder {
     ///
     /// Panics if the file is not a valid spud file
     pub fn new(file: &[u8]) -> Self {
-        let spud_version: &str = env!("SPUD_VERSION");
+        let spud_version: &str = &std::env::var("SPUD_VERSION").unwrap();
 
         let spud_version_bytes: Vec<u8> = spud_version.as_bytes().to_vec();
         let spud_version_len: usize = spud_version_bytes.len();
