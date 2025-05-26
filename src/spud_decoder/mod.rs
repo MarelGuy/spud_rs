@@ -105,6 +105,11 @@ impl SpudDecoder {
         }
     }
 
+    /// Decodes the SPUD file contents into a JSON string.
+    /// # Arguments
+    ///
+    /// * `pretty` - Whether to format the JSON output with indentation.
+    /// * `want_array` - Whether to wrap the output in an array, useless if the decoder finds more than one object.
     /// # Panics
     ///
     /// Panics if serde fails to serialize the file
@@ -475,6 +480,12 @@ impl SpudDecoder {
 impl SpudDecoder {
     #[cfg(feature = "async")]
     #[must_use]
+    /// Creates a new `SpudDecoder` instance from a file at the specified path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the file to read.
+    ///
     /// # Panics
     ///
     /// Will panic if the path is invalid
@@ -486,9 +497,19 @@ impl SpudDecoder {
 
     #[cfg(not(feature = "async"))]
     #[must_use]
+    /// Creates a new `SpudDecoder` instance from a file at the specified path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the file to read.
+    ///
     /// # Panics
     ///
     /// Will panic if the path is invalid
+    ///
+    /// # Notes
+    ///
+    /// There is an async version of this function available if the `async` feature is enabled.
     pub fn new_from_path(path: &str) -> Self {
         let file: Vec<u8> = std_read(path).unwrap();
 
@@ -496,6 +517,12 @@ impl SpudDecoder {
     }
 
     #[cfg(feature = "async")]
+    /// Builds a JSON file at the specified path with the given file name.
+    ///  # Arguments
+    ///
+    /// * `path_str` - The path to the directory where the file will be created.
+    /// * `file_name` - The name of the file to create.
+    ///
     /// # Panics
     ///
     /// Panics if the file has errors being written
@@ -522,9 +549,19 @@ impl SpudDecoder {
     }
 
     #[cfg(not(feature = "async"))]
+    /// Builds a JSON file at the specified path with the given file name.
+    ///  # Arguments
+    ///
+    /// * `path_str` - The path to the directory where the file will be created.
+    /// * `file_name` - The name of the file to create.
+    ///
     /// # Panics
     ///
     /// Panics if the file has errors being written
+    ///
+    /// # Notes
+    ///
+    /// There is an async version of this function available if the `async` feature is enabled.
     pub fn build_file(&self, path: &str) {
         let path: &Path = Path::new(path);
 

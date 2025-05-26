@@ -1,5 +1,7 @@
 use super::object_id::ObjectId;
 
+/// Represents a string for SPUD encoding.
+/// This struct wraps a `String` and provides conversion implementations
 pub struct SpudString(pub String);
 
 impl From<&str> for SpudString {

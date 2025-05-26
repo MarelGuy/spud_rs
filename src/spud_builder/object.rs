@@ -40,6 +40,26 @@ impl SpudObject {
         }
     }
 
+    /// Adds a value to the object with the specified field name.
+    ///
+    /// # Arguments
+    /// * `field_name` - The name of the field to which the value will be added.
+    /// * `value` - The value to be added, which must implement the `SpudTypesExt` trait.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use spud::{SpudBuilder, SpudObject, types::SpudString};
+    ///
+    /// let mut builder = SpudBuilder::new();
+    /// let mut object = builder.new_object();
+    ///
+    /// object.add_value("example_field", SpudString::from("example_value"));
+    /// // The object now contains the field "example_field" with the value "example_value".
+    /// ```
+    ///
+    /// # Returns
+    /// A mutable reference to the `SpudObject`, allowing for method chaining.
     pub fn add_value<T: SpudTypesExt>(&mut self, field_name: &str, value: T) -> &mut Self {
         self.add_field_name(field_name);
 
