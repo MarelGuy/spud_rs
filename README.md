@@ -121,13 +121,17 @@ let data: MyData = decoder.deserialize().unwrap();
 
 Here are some planned features and improvements:
 
+* **[ ] More Types:** 
+  * **[ ] Decimals**
+  * **[ ] Timestamp**
+  * **[ ] DateTime (no timezone)**
+  * **[ ] Enums**
 * **[ ] `serde` Integration:** Implemented `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder`.
-* **[ ] More Types:** Support for timestamps, decimals, or other common data types if needed.
+
 
 ## Known bugs
 
-There are some bugs that are yet to be fixed:
- * **Order of field:** Even if i'm using an IndexMap to order the fields, the order is still not correct
+There are some bugs that are yet to be fixed, most of them are minor and are not listed here.
 
 ## Contributing
 
