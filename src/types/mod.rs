@@ -4,4 +4,5 @@ mod spud_string;
 
 pub use binary_blob::BinaryBlob;
 pub use object_id::ObjectId;
+pub use rust_decimal::Decimal;
 pub use spud_string::SpudString;

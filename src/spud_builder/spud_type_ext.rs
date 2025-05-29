@@ -1,3 +1,5 @@
+use rust_decimal::Decimal;
+
 use crate::{
     functions::add_value_length,
     spud_types::SpudTypes,
@@ -79,6 +81,7 @@ impl_spud_primitive_writer_le!(u8, i8, i16, u16, i32, u32, f32, i64, u64, f64);
 impl_spud_type_ext! {
     SpudString, String, write_string,
     BinaryBlobStruct<'_>, BinaryBlob, write_blob,
+    Decimal, Decimal, write_decimal,
     bool, Bool, write_bool,
     i8, I8, write_primitive_value,
     u8, U8, write_primitive_value,
@@ -115,4 +118,10 @@ fn write_null(_value: (), data: &mut Vec<u8>) {
 
 fn write_primitive_value<T: SpudPrimitiveWriter>(value: T, data: &mut Vec<u8>) {
     value.write_primitive(data);
+}
+
+fn write_decimal(value: Decimal, data: &mut Vec<u8>) {
+    let value_data: [u8; 16] = value.serialize();
+
+    data.extend_from_slice(&value_data);
 }

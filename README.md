@@ -122,7 +122,7 @@ let data: MyData = decoder.deserialize().unwrap();
 Here are some planned features and improvements:
 
 * **[ ] More Types:** 
-  * **[ ] Decimals**
+  * **[x] Decimals**
   * **[ ] Timestamp**
   * **[ ] DateTime (no timezone)**
   * **[ ] Enums**

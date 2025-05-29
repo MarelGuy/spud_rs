@@ -1,8 +1,7 @@
 #[repr(u8)]
 #[derive(Debug, PartialEq)]
 pub enum SpudTypes {
-    FieldNameListEnd = 0x01,
-    FieldNameId = 0x02,
+    // Core Data Types
     Null = 0x03,
     Bool = 0x04,
     I8 = 0x05,
@@ -15,13 +14,22 @@ pub enum SpudTypes {
     U64 = 0x0C,
     F32 = 0x0D,
     F64 = 0x0E,
+    Decimal = 0x16,
+
+    // Variable-Length Types
     String = 0x0F,
+    BinaryBlob = 0x14,
+
+    // Composite Type Delimiters
     ArrayStart = 0x10,
     ArrayEnd = 0x11,
     ObjectStart = 0x12,
     ObjectEnd = 0x13,
-    BinaryBlob = 0x14,
+
+    // Identifiers and Metadata
     ObjectId = 0x15,
+    FieldNameId = 0x02,
+    FieldNameListEnd = 0x01,
 }
 
 impl SpudTypes {
@@ -49,6 +57,7 @@ impl SpudTypes {
             0x13 => Some(SpudTypes::ObjectEnd),
             0x14 => Some(SpudTypes::BinaryBlob),
             0x15 => Some(SpudTypes::ObjectId),
+            0x16 => Some(SpudTypes::Decimal),
             _ => None,
         }
     }

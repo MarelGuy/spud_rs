@@ -5,6 +5,7 @@ use std::{
 };
 
 use indexmap::IndexMap;
+use rust_decimal::Decimal;
 use serde_json::{Map, Number, Value};
 
 #[cfg(feature = "async")]
@@ -381,6 +382,16 @@ impl SpudDecoder {
                             .unwrap(),
                     )
                 }
+                Some(SpudTypes::Decimal) => {
+                    self.next(1).unwrap();
+
+                    let read_bytes: Vec<u8> = self.read_bytes(16);
+
+                    let decimal_value: Decimal =
+                        Decimal::deserialize(read_bytes.try_into().unwrap());
+
+                    Value::String(decimal_value.to_string())
+                }
                 Some(SpudTypes::String) => {
                     let string_len: usize = self.read_variable_length_data();
 
@@ -465,7 +476,6 @@ impl SpudDecoder {
                 }
                 _ => {
                     tracing::error!("Unknown type: {byte} at index {}", self.index);
-
                     panic!("Closing...");
                 }
             };
