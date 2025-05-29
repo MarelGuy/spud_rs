@@ -2,7 +2,7 @@
 
 use core::cell::RefCell;
 use indexmap::IndexMap;
-use std::{collections::HashMap, fmt, path::Path, process, rc::Rc};
+use std::{fmt, path::Path, process, rc::Rc};
 
 use crate::{
     functions::{check_path, initialise_header},
@@ -122,7 +122,7 @@ impl fmt::Debug for SpudBuilder {
         debug_builder.field("data", &self.data.borrow());
         debug_builder.field("objects", &self.objects.borrow());
 
-        let mut seen_ids_to_display = HashMap::new();
+        let mut seen_ids_to_display = IndexMap::new();
 
         for (index, &is_seen) in self.seen_ids.borrow().iter().enumerate() {
             if is_seen {

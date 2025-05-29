@@ -1,6 +1,5 @@
 #![allow(clippy::too_many_lines)]
 use std::{
-    collections::HashMap,
     io::{self},
     path::Path,
 };
@@ -29,7 +28,7 @@ pub struct SpudDecoder {
     current_object: Vec<u8>,
     index: usize,
     field_names: IndexMap<u8, String>,
-    output: Vec<HashMap<String, Value>>,
+    output: Vec<IndexMap<String, Value>>,
     current_byte: u8,
     current_field: String,
     output_json: String,
@@ -122,7 +121,7 @@ impl SpudDecoder {
             self.index = 0;
             self.current_field.clear();
 
-            let decoded_object: HashMap<String, Value> = self.decode_object();
+            let decoded_object: IndexMap<String, Value> = self.decode_object();
             self.output.push(decoded_object);
         }
 
@@ -144,8 +143,8 @@ impl SpudDecoder {
         self.output_json.as_str()
     }
 
-    fn decode_object(&mut self) -> HashMap<String, Value> {
-        let mut object: HashMap<String, Value> = HashMap::new();
+    fn decode_object(&mut self) -> IndexMap<String, Value> {
+        let mut object: IndexMap<String, Value> = IndexMap::new();
 
         self.next(2).unwrap();
 
