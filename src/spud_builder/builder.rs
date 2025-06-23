@@ -2,7 +2,7 @@
 
 use core::cell::RefCell;
 use indexmap::IndexMap;
-use std::{fmt, path::Path, process, rc::Rc};
+use std::{fmt, path::Path, rc::Rc};
 
 use crate::{
     functions::{check_path, initialise_header},
@@ -15,9 +15,6 @@ use tokio::fs::write;
 
 #[cfg(not(feature = "async"))]
 use std::fs;
-
-#[cfg(feature = "serde")]
-use super::SpudSerializer;
 
 use super::SpudObject;
 
@@ -161,14 +158,21 @@ impl SpudBuilder {
     pub async fn build_file(&mut self, path_str: &str, file_name: &str) {
         let path_str: String = match check_path(path_str, file_name) {
             Some(path) => path,
-            None => process::exit(1),
+            None => panic!("Invalid path: {path_str}"),
         };
 
         let path: &Path = Path::new(&path_str);
 
         let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow());
 
-        write(path, header).await.unwrap();
+        match write(path, header).await {
+            Ok(()) => {}
+            Err(e) => {
+                tracing::error!("Failed to write SPUD file: {e}");
+
+                panic!("Closing...")
+            }
+        }
     }
 
     #[cfg(not(feature = "async"))]
@@ -188,27 +192,20 @@ impl SpudBuilder {
     pub fn build_file(&mut self, path_str: &str, file_name: &str) {
         let path_str: String = match check_path(path_str, file_name) {
             Some(path) => path,
-            None => process::exit(1),
+            None => panic!("Invalid path: {path_str}"),
         };
 
         let path: &Path = Path::new(&path_str);
 
         let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow());
 
-        fs::write(path, header).unwrap();
-    }
-}
+        match fs::write(path, header) {
+            Ok(()) => {}
+            Err(e) => {
+                tracing::error!("Failed to write SPUD file: {e}");
 
-impl SpudBuilder {
-    /// # Panics
-    ///
-    /// Will panic if the serialization fails
-    #[cfg(feature = "serde")]
-    pub fn serialize<T: serde::ser::Serialize>(&mut self, value: T) -> &mut Self {
-        let serializer: SpudSerializer = SpudSerializer::new(self);
-
-        value.serialize(serializer).unwrap();
-
-        self
+                panic!("Closing...")
+            }
+        }
     }
 }

@@ -3,7 +3,13 @@ use indexmap::IndexMap;
 use crate::spud_types::SpudTypes;
 
 pub(crate) fn initialise_header(field_names: &IndexMap<(String, u8), u8>, data: &[u8]) -> Vec<u8> {
-    let mut header: Vec<u8> = std::env::var("SPUD_VERSION").unwrap().as_bytes().to_vec();
+    let mut header: Vec<u8> = match std::env::var("SPUD_VERSION") {
+        Ok(version) => version.as_bytes().to_vec(),
+        Err(e) => {
+            tracing::error!("Failed to get SPUD_VERSION: {e}");
+            panic!("Closing...")
+        }
+    };
 
     for (name, id) in field_names {
         header.push(name.1);

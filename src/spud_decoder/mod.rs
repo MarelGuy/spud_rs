@@ -1,5 +1,6 @@
 #![allow(clippy::too_many_lines)]
 use std::{
+    env,
     io::{self},
     path::Path,
 };
@@ -41,7 +42,16 @@ impl SpudDecoder {
     ///
     /// Panics if the file is not a valid spud file
     pub fn new(file: &[u8]) -> Self {
-        let spud_version: &str = &std::env::var("SPUD_VERSION").unwrap();
+        let spud_version_env: Result<String, env::VarError> = env::var("SPUD_VERSION");
+
+        let spud_version: &str = match &spud_version_env {
+            Ok(version) => version,
+            Err(e) => {
+                tracing::error!("Failed to get SPUD_VERSION from env: {e}");
+
+                panic!("Closing...")
+            }
+        };
 
         let spud_version_bytes: Vec<u8> = spud_version.as_bytes().to_vec();
         let spud_version_len: usize = spud_version_bytes.len();
@@ -82,7 +92,16 @@ impl SpudDecoder {
 
                     cursor += 1;
 
-                    field_names.insert(field_id, String::from_utf8(field_name).unwrap());
+                    let decoded_field_name: String = if let Ok(name) = String::from_utf8(field_name)
+                    {
+                        name
+                    } else {
+                        tracing::error!("Failed to decode field name");
+
+                        panic!("Closing...")
+                    };
+
+                    field_names.insert(field_id, decoded_field_name);
 
                     if field_names_bytes[cursor] == SpudTypes::FieldNameListEnd as u8 {
                         break;
@@ -126,19 +145,30 @@ impl SpudDecoder {
             self.output.push(decoded_object);
         }
 
-        if self.output.len() == 1 && !want_array {
-            let single_object = &self.output[0];
-            self.output_json = if pretty {
-                serde_json::to_string_pretty(single_object).unwrap()
+        let output_json: Result<String, serde_json::Error> =
+            if self.output.len() == 1 && !want_array {
+                let single_object: &IndexMap<String, Value> = &self.output[0];
+
+                if pretty {
+                    serde_json::to_string_pretty(single_object)
+                } else {
+                    serde_json::to_string(single_object)
+                }
+            } else if pretty {
+                serde_json::to_string_pretty(&self.output)
             } else {
-                serde_json::to_string(single_object).unwrap()
+                serde_json::to_string(&self.output)
             };
-        } else {
-            self.output_json = if pretty {
-                serde_json::to_string_pretty(&self.output).unwrap()
-            } else {
-                serde_json::to_string(&self.output).unwrap()
-            };
+
+        match output_json {
+            Ok(json) => {
+                self.output_json = json;
+            }
+            Err(err) => {
+                tracing::error!("Failed to serialize SPUD file: {}", err);
+
+                panic!("Closing...")
+            }
         }
 
         self.output_json.as_str()
@@ -235,7 +265,7 @@ impl SpudDecoder {
     fn read_variable_length_data(&mut self) -> usize {
         self.next(1).unwrap();
 
-        let read_byte_value: usize = match self.current_byte {
+        let read_byte_value: u64 = match self.current_byte {
             val if val == SpudTypes::U8 as u8 => 1,
             val if val == SpudTypes::U16 as u8 => 2,
             val if val == SpudTypes::U32 as u8 => 4,
@@ -245,7 +275,14 @@ impl SpudDecoder {
 
         self.next(1).unwrap();
 
-        let read_bytes: Vec<u8> = self.read_bytes(read_byte_value);
+        let read_bytes: Vec<u8> =
+            self.read_bytes(if let Ok(size) = usize::try_from(read_byte_value) {
+                size
+            } else {
+                tracing::error!("Invalid size for variable length data: {read_byte_value}");
+
+                panic!("Closing...")
+            });
 
         match read_byte_value {
             1 => u8::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
@@ -592,15 +629,5 @@ impl SpudDecoder {
                 panic!("Closing...")
             }
         }
-    }
-}
-
-#[cfg(feature = "serde")]
-impl SpudDecoder {
-    /// # Errors
-    ///
-    /// Will return an error if the deserialization fails
-    pub fn deserialize<T: serde::de::DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
-        serde_json::from_str(&self.output_json)
     }
 }

@@ -9,7 +9,5 @@ pub(crate) fn check_path(path_str: &str, file_name: &str) -> Option<String> {
         return None;
     }
 
-    let path_str: String = format!("{path_str}/{file_name}.spud");
-
-    Some(path_str)
+    Some(format!("{path_str}/{file_name}.spud"))
 }

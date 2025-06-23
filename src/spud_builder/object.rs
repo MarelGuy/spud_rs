@@ -71,7 +71,16 @@ impl SpudObject {
     }
 
     fn add_field_name(&mut self, field_name: &str) -> &mut Self {
-        let key: (String, u8) = (field_name.into(), u8::try_from(field_name.len()).unwrap());
+        let key: (String, u8) = (
+            field_name.into(),
+            if let Ok(value) = u8::try_from(field_name.len()) {
+                value
+            } else {
+                tracing::error!("Field name is too long: {field_name}");
+
+                panic!("Closing...")
+            },
+        );
 
         let id: u8 = if let Some(value) = self.field_names.borrow().get(&key) {
             *value

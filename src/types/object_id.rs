@@ -48,13 +48,17 @@ impl ObjectId {
     pub(crate) fn new() -> Self {
         let mut id: [u8; 10] = [0u8; 10];
 
-        let timestamp_secs: u32 = u32::try_from(
+        let timestamp_secs: u32 = if let Ok(value) = u32::try_from(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .expect("System time is before UNIX EPOCH, which should not happen.")
                 .as_secs(),
-        )
-        .unwrap();
+        ) {
+            value
+        } else {
+            tracing::error!("Failed to get current timestamp");
+            panic!("Closing...")
+        };
 
         id[0..4].copy_from_slice(&timestamp_secs.to_le_bytes());
         id[4..7].copy_from_slice(&INSTANCE_IDENTIFIER[..]);
@@ -82,6 +86,7 @@ impl From<&str> for ObjectId {
         ObjectId(decoded.try_into().expect("Invalid ObjectId length"))
     }
 }
+
 impl From<String> for ObjectId {
     fn from(s: String) -> Self {
         let decoded: Vec<u8> = bs58::decode(s).into_vec().expect("Failed to decode base58");
@@ -89,6 +94,7 @@ impl From<String> for ObjectId {
         ObjectId(decoded.try_into().expect("Invalid ObjectId length"))
     }
 }
+
 impl From<[u8; 10]> for ObjectId {
     fn from(bytes: [u8; 10]) -> Self {
         ObjectId(bytes)

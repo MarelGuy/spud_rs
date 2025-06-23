@@ -1,5 +1,5 @@
 /// Struct representing a binary blob for SPUD encoding.
-pub struct BinaryBlob<'a>(pub &'a [u8]);
+pub struct BinaryBlob<'a>(pub(crate) &'a [u8]);
 
 impl<'a> BinaryBlob<'a> {
     #[must_use]
