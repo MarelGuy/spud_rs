@@ -15,7 +15,7 @@ description = "A Rust library for parsing the SPUD binary format."
 chrono = { version = "0.4.41", default-features = false, features = ["clock"] }
 indexmap = { version = "2.9.0", features = ["serde"] }
 
-rust_decimal = "1.37.1"
+rust_decimal = "1.37.2"
 serde_json = "1.0.140"
 getrandom = "0.3.3"
 tracing = "0.1.41"
