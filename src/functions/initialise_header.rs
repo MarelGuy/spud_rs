@@ -1,15 +1,14 @@
+use std::error::Error;
+
 use indexmap::IndexMap;
 
 use crate::spud_types::SpudTypes;
 
-pub(crate) fn initialise_header(field_names: &IndexMap<(String, u8), u8>, data: &[u8]) -> Vec<u8> {
-    let mut header: Vec<u8> = match std::env::var("SPUD_VERSION") {
-        Ok(version) => version.as_bytes().to_vec(),
-        Err(e) => {
-            tracing::error!("Failed to get SPUD_VERSION: {e}");
-            panic!("Closing...")
-        }
-    };
+pub(crate) fn initialise_header(
+    field_names: &IndexMap<(String, u8), u8>,
+    data: &[u8],
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut header: Vec<u8> = std::env::var("SPUD_VERSION")?.as_bytes().to_vec();
 
     for (name, id) in field_names {
         header.push(name.1);
@@ -24,5 +23,5 @@ pub(crate) fn initialise_header(field_names: &IndexMap<(String, u8), u8>, data: 
     header.extend_from_slice(data);
     header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
 
-    header
+    Ok(header)
 }

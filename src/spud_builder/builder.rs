@@ -2,6 +2,8 @@
 
 use core::cell::RefCell;
 use indexmap::IndexMap;
+#[cfg(feature = "async")]
+use std::error::Error;
 use std::{fmt, path::Path, rc::Rc};
 
 use crate::{
@@ -63,7 +65,6 @@ impl SpudBuilder {
         }
     }
 
-    #[must_use]
     /// Creates a new `SpudObject` instance associated with this builder.
     /// # Examples
     ///
@@ -77,10 +78,14 @@ impl SpudBuilder {
     /// # Returns
     /// A new instance of `SpudObject` that is linked to the builder's field names, seen IDs, and objects.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the object cannot be created, typically due to internal issues with the builder's state.
+    ///
     /// # Note
     /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder, allowing for consistent data management.
     /// Nothing is cloned, SPUD uses `Rc` and `RefCell` to manage shared ownership and mutability.
-    pub fn new_object(&self) -> SpudObject {
+    pub fn new_object(&self) -> Result<SpudObject, Box<dyn Error>> {
         SpudObject::new(
             Rc::clone(&self.field_names),
             Rc::clone(&self.seen_ids),
@@ -152,27 +157,23 @@ impl SpudBuilder {
     /// * `path_str` - The path to the directory where the file will be created.
     /// * `file_name` - The name of the file to create.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Will panic if the path is invalid
-    pub async fn build_file(&mut self, path_str: &str, file_name: &str) {
-        let path_str: String = match check_path(path_str, file_name) {
-            Some(path) => path,
-            None => panic!("Invalid path: {path_str}"),
-        };
+    /// Returns an error if the path is invalid
+    pub async fn build_file(
+        &mut self,
+        path_str: &str,
+        file_name: &str,
+    ) -> Result<(), Box<dyn Error>> {
+        let path_str: String = check_path(path_str, file_name)?;
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow());
+        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow())?;
 
-        match write(path, header).await {
-            Ok(()) => {}
-            Err(e) => {
-                tracing::error!("Failed to write SPUD file: {e}");
+        write(path, header).await?;
 
-                panic!("Closing...")
-            }
-        }
+        Ok(())
     }
 
     #[cfg(not(feature = "async"))]
@@ -189,23 +190,15 @@ impl SpudBuilder {
     /// # Notes
     ///
     /// There is an async version of this function available if the `async` feature is enabled.
-    pub fn build_file(&mut self, path_str: &str, file_name: &str) {
-        let path_str: String = match check_path(path_str, file_name) {
-            Some(path) => path,
-            None => panic!("Invalid path: {path_str}"),
-        };
+    pub fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), Box<dyn Error>> {
+        let path_str: String = check_path(path_str, file_name)?;
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow());
+        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow())?;
 
-        match fs::write(path, header) {
-            Ok(()) => {}
-            Err(e) => {
-                tracing::error!("Failed to write SPUD file: {e}");
+        fs::write(path, header)?;
 
-                panic!("Closing...")
-            }
-        }
+        Ok(())
     }
 }

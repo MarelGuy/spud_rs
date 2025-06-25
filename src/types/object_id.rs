@@ -3,6 +3,7 @@ use core::{
     sync::atomic::{AtomicU32, Ordering},
 };
 use std::{
+    error::Error,
     fmt,
     sync::LazyLock,
     time::{SystemTime, UNIX_EPOCH},
@@ -22,30 +23,24 @@ pub struct ObjectId(pub(crate) [u8; 10]);
 
 static INSTANCE_IDENTIFIER: LazyLock<[u8; 3]> = LazyLock::new(|| {
     let mut instance_bytes: [u8; 3] = [0u8; 3];
-    match getrandom::fill(&mut instance_bytes) {
-        Ok(()) => instance_bytes,
-        Err(e) => {
-            tracing::error!("Failed to generate instance identifier: {e}");
-            panic!("Closing...")
-        }
-    }
+
+    getrandom::fill(&mut instance_bytes).expect("Failed to generate instance identifier");
+
+    instance_bytes
 });
 
 static COUNTER_SEED: LazyLock<u32> = LazyLock::new(|| {
     let mut seed_bytes: [u8; 4] = [0u8; 4];
-    match getrandom::fill(&mut seed_bytes[0..3]) {
-        Ok(()) => u32::from_le_bytes(seed_bytes) & 0x00FF_FFFF,
-        Err(e) => {
-            tracing::error!("Failed to generate counter seed: {e}");
-            panic!("Closing...")
-        }
-    }
+
+    getrandom::fill(&mut seed_bytes[0..3]).expect("Failed to generate counter seed");
+
+    u32::from_le_bytes(seed_bytes) & 0x00FF_FFFF
 });
 
 static ID_COUNTER: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(*COUNTER_SEED));
 
 impl ObjectId {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new() -> Result<Self, Box<dyn Error>> {
         let mut id: [u8; 10] = [0u8; 10];
 
         let timestamp_secs: u32 = if let Ok(value) = u32::try_from(
@@ -56,8 +51,7 @@ impl ObjectId {
         ) {
             value
         } else {
-            tracing::error!("Failed to get current timestamp");
-            panic!("Closing...")
+            return Err("Failed to get current timestamp".to_string())?;
         };
 
         id[0..4].copy_from_slice(&timestamp_secs.to_le_bytes());
@@ -69,7 +63,7 @@ impl ObjectId {
 
         id[7..10].copy_from_slice(&counter_bytes[0..3]);
 
-        ObjectId(id)
+        Ok(ObjectId(id))
     }
 }
 

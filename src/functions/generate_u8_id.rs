@@ -1,13 +1,11 @@
-pub(crate) fn generate_u8_id(id_vec: &mut Vec<bool>) -> u8 {
+use std::error::Error;
+
+pub(crate) fn generate_u8_id(id_vec: &mut Vec<bool>) -> Result<u8, Box<dyn Error>> {
     let mut id: [u8; 1] = [0_u8; 1];
 
-    let id: u8 = match getrandom::fill(&mut id) {
-        Ok(()) => id[0],
-        Err(e) => {
-            tracing::error!("Failed to generate ID: {e}");
-            panic!("Closing...")
-        }
-    };
+    getrandom::fill(&mut id)?;
+
+    let id: u8 = id[0];
 
     if id_vec[id as usize] {
         return generate_u8_id(id_vec);
@@ -15,5 +13,5 @@ pub(crate) fn generate_u8_id(id_vec: &mut Vec<bool>) -> u8 {
 
     id_vec[id as usize] = true;
 
-    id
+    Ok(id)
 }
