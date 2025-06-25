@@ -168,7 +168,7 @@ impl SpudBuilder {
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow())?;
+        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow());
 
         write(path, header).await?;
 
