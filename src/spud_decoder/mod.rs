@@ -527,10 +527,10 @@ impl SpudDecoder {
     /// # Notes
     ///
     /// There is an async version of this function available if the `async` feature is enabled.
-    pub fn new_from_path(path: &str) -> Self {
+    pub fn new_from_path(path: &str) -> Result<Self, Box<dyn Error>> {
         let file: Vec<u8> = std_read(path)?;
 
-        Self::new(&file)
+        Ok(Self::new(&file))
     }
 
     #[cfg(feature = "async")]
