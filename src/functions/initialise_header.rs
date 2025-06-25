@@ -8,7 +8,7 @@ pub(crate) fn initialise_header(
     field_names: &IndexMap<(String, u8), u8>,
     data: &[u8],
 ) -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut header: Vec<u8> = std::env::var("SPUD_VERSION")?.as_bytes().to_vec();
+    let mut header: Vec<u8> = "SPUD-0.2.0".as_bytes().to_vec();
 
     for (name, id) in field_names {
         header.push(name.1);
