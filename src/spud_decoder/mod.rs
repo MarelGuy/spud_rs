@@ -530,7 +530,7 @@ impl SpudDecoder {
     pub fn new_from_path(path: &str) -> Result<Self, Box<dyn Error>> {
         let file: Vec<u8> = std_read(path)?;
 
-        Ok(Self::new(&file))
+        Ok(Self::new(&file)?)
     }
 
     #[cfg(feature = "async")]
