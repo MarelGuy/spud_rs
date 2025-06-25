@@ -2,7 +2,6 @@
 
 use core::cell::RefCell;
 use indexmap::IndexMap;
-#[cfg(feature = "async")]
 use std::error::Error;
 use std::{fmt, path::Path, rc::Rc};
 
