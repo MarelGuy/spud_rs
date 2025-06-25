@@ -235,7 +235,11 @@ impl SpudDecoder {
 
         let field_name_id: u8 = self.current_object[self.index];
 
-        self.current_field = self.field_names.get(&field_name_id).cloned().unwrap();
+        self.current_field = self
+            .field_names
+            .get(&field_name_id)
+            .cloned()
+            .expect("Field name not found");
 
         Ok(1)
     }
@@ -259,10 +263,12 @@ impl SpudDecoder {
         let read_bytes: Vec<u8> = self.read_bytes(usize::try_from(read_byte_value)?)?;
 
         Ok(match read_byte_value {
-            1 => u8::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-            2 => u16::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-            4 => u32::from_le_bytes(read_bytes.try_into().unwrap()) as usize,
-            8 => usize::try_from(u64::from_le_bytes(read_bytes.try_into().unwrap()))?,
+            1 => u8::from_le_bytes(read_bytes.try_into().expect("Invalid U8 bytes")) as usize,
+            2 => u16::from_le_bytes(read_bytes.try_into().expect("Invalid U16 bytes")) as usize,
+            4 => u32::from_le_bytes(read_bytes.try_into().expect("Invalid U32 bytes")) as usize,
+            8 => usize::try_from(u64::from_le_bytes(
+                read_bytes.try_into().expect("Invalid U64 bytes"),
+            ))?,
             _ => unreachable!(),
         })
     }
@@ -310,7 +316,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(1)?;
 
                     Value::Number(Number::from(u8::from_le_bytes(
-                        read_bytes.try_into().unwrap(),
+                        read_bytes.try_into().expect("Invalid U8 bytes"),
                     )))
                 }
                 Some(SpudTypes::U16) => {
@@ -319,7 +325,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(2)?;
 
                     Value::Number(Number::from(u16::from_le_bytes(
-                        read_bytes.try_into().unwrap(),
+                        read_bytes.try_into().expect("Invalid U16 bytes"),
                     )))
                 }
                 Some(SpudTypes::U32) => {
@@ -328,7 +334,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(4)?;
 
                     Value::Number(Number::from(u32::from_le_bytes(
-                        read_bytes.try_into().unwrap(),
+                        read_bytes.try_into().expect("Invalid U32 bytes"),
                     )))
                 }
                 Some(SpudTypes::U64) => {
@@ -337,7 +343,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(8)?;
 
                     Value::Number(Number::from(u64::from_le_bytes(
-                        read_bytes.try_into().unwrap(),
+                        read_bytes.try_into().expect("Invalid U64 bytes"),
                     )))
                 }
                 Some(SpudTypes::I8) => {
@@ -346,7 +352,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(1)?;
 
                     Value::Number(Number::from(i8::from_le_bytes(
-                        read_bytes.try_into().unwrap(),
+                        read_bytes.try_into().expect("Invalid I8 bytes"),
                     )))
                 }
                 Some(SpudTypes::I16) => {
@@ -355,7 +361,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(2)?;
 
                     Value::Number(Number::from(i16::from_le_bytes(
-                        read_bytes.try_into().unwrap(),
+                        read_bytes.try_into().expect("Invalid I16 bytes"),
                     )))
                 }
                 Some(SpudTypes::I32) => {
@@ -364,7 +370,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(4)?;
 
                     Value::Number(Number::from(i32::from_le_bytes(
-                        read_bytes.try_into().unwrap(),
+                        read_bytes.try_into().expect("Invalid I32 bytes"),
                     )))
                 }
                 Some(SpudTypes::I64) => {
@@ -373,7 +379,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(8)?;
 
                     Value::Number(Number::from(i64::from_le_bytes(
-                        read_bytes.try_into().unwrap(),
+                        read_bytes.try_into().expect("Invalid I64 bytes"),
                     )))
                 }
                 Some(SpudTypes::F32) => {
@@ -382,8 +388,11 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(4)?;
 
                     Value::Number(
-                        Number::from_f64(f32::from_le_bytes(read_bytes.try_into().unwrap()).into())
-                            .unwrap(),
+                        Number::from_f64(
+                            f32::from_le_bytes(read_bytes.try_into().expect("Invalid F32 bytes"))
+                                .into(),
+                        )
+                        .expect("Invalid F32 number"),
                     )
                 }
                 Some(SpudTypes::F64) => {
@@ -392,8 +401,10 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(8)?;
 
                     Value::Number(
-                        Number::from_f64(f64::from_le_bytes(read_bytes.try_into().unwrap()))
-                            .unwrap(),
+                        Number::from_f64(f64::from_le_bytes(
+                            read_bytes.try_into().expect("Invalid F64 bytes"),
+                        ))
+                        .expect("Invalid F64 number"),
                     )
                 }
                 Some(SpudTypes::Decimal) => {
@@ -402,7 +413,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(16)?;
 
                     let decimal_value: Decimal =
-                        Decimal::deserialize(read_bytes.try_into().unwrap());
+                        Decimal::deserialize(read_bytes.try_into().expect("Invalid Decimal bytes"));
 
                     Value::String(decimal_value.to_string())
                 }

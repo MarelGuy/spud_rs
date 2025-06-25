@@ -11,9 +11,9 @@ pub struct Date {
 impl From<NaiveDate> for Date {
     fn from(date: NaiveDate) -> Self {
         Date {
-            year: u16::try_from(date.year()).unwrap(),
-            month: u8::try_from(date.month()).unwrap(),
-            day: u8::try_from(date.day()).unwrap(),
+            year: u16::try_from(date.year()).expect("Invalid year"),
+            month: u8::try_from(date.month()).expect("Invalid month"),
+            day: u8::try_from(date.day()).expect("Invalid day"),
         }
     }
 }
