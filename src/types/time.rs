@@ -1,4 +1,4 @@
-use core::fmt::{Display, Formatter, Result};
+use core::{fmt, str::FromStr};
 
 use chrono::{NaiveTime, Timelike};
 
@@ -20,6 +20,33 @@ impl From<NaiveTime> for Time {
     }
 }
 
+impl FromStr for Time {
+    type Err = core::fmt::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(':').collect();
+        if parts.len() != 3 && parts.len() != 4 {
+            return Err(core::fmt::Error);
+        }
+
+        let hour: u8 = u8::from_str(parts[0]).map_err(|_| core::fmt::Error)?;
+        let minute: u8 = u8::from_str(parts[1]).map_err(|_| core::fmt::Error)?;
+        let second: u8 = u8::from_str(parts[2]).map_err(|_| core::fmt::Error)?;
+        let nanosecond = if parts.len() == 4 {
+            u32::from_str(parts[3]).map_err(|_| core::fmt::Error)?
+        } else {
+            0
+        };
+
+        Ok(Time {
+            hour,
+            minute,
+            second,
+            nanosecond,
+        })
+    }
+}
+
 impl From<Time> for NaiveTime {
     fn from(time: Time) -> Self {
         NaiveTime::from_hms_nano_opt(
@@ -32,12 +59,16 @@ impl From<Time> for NaiveTime {
     }
 }
 
-impl Display for Time {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(
-            f,
-            "{:02}:{:02}:{:02}.{:09}",
-            self.hour, self.minute, self.second, self.nanosecond
-        )
+impl fmt::Display for Time {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.nanosecond == 0 {
+            write!(f, "{:02}:{:02}:{:02}", self.hour, self.minute, self.second)
+        } else {
+            write!(
+                f,
+                "{:02}:{:02}:{:02}.{:09}",
+                self.hour, self.minute, self.second, self.nanosecond
+            )
+        }
     }
 }

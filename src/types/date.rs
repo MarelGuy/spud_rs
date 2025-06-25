@@ -1,4 +1,4 @@
-use core::fmt::Display;
+use core::{fmt, str::FromStr};
 
 use chrono::{Datelike, NaiveDate};
 
@@ -18,6 +18,23 @@ impl From<NaiveDate> for Date {
     }
 }
 
+impl FromStr for Date {
+    type Err = fmt::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('-').collect();
+
+        if parts.len() != 3 {
+            return Err(fmt::Error);
+        }
+
+        let year: u16 = u16::from_str(parts[0]).map_err(|_| fmt::Error)?;
+        let month: u8 = u8::from_str(parts[1]).map_err(|_| fmt::Error)?;
+        let day: u8 = u8::from_str(parts[2]).map_err(|_| fmt::Error)?;
+
+        Ok(Date { year, month, day })
+    }
+}
+
 impl From<Date> for NaiveDate {
     fn from(date: Date) -> Self {
         NaiveDate::from_ymd_opt(
@@ -29,8 +46,8 @@ impl From<Date> for NaiveDate {
     }
 }
 
-impl Display for Date {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl fmt::Display for Date {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:04}-{:02}-{:02}", self.year, self.month, self.day)
     }
 }
