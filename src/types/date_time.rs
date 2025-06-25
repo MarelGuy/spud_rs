@@ -1,6 +1,6 @@
 use core::fmt::{Display, Formatter, Result};
 
-use chrono::NaiveDateTime;
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 use crate::types::{Date, Time};
 
@@ -15,6 +15,15 @@ impl From<NaiveDateTime> for DateTime {
             date: Date::from(date_time.date()),
             time: Time::from(date_time.time()),
         }
+    }
+}
+
+impl From<DateTime> for NaiveDateTime {
+    fn from(date_time: DateTime) -> Self {
+        NaiveDateTime::new(
+            NaiveDate::from(date_time.date),
+            NaiveTime::from(date_time.time),
+        )
     }
 }
 

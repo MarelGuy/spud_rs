@@ -20,6 +20,18 @@ impl From<NaiveTime> for Time {
     }
 }
 
+impl From<Time> for NaiveTime {
+    fn from(time: Time) -> Self {
+        NaiveTime::from_hms_nano_opt(
+            u32::from(time.hour),
+            u32::from(time.minute),
+            u32::from(time.second),
+            time.nanosecond,
+        )
+        .expect("Invalid time conversion")
+    }
+}
+
 impl Display for Time {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(

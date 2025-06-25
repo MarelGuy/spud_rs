@@ -18,6 +18,17 @@ impl From<NaiveDate> for Date {
     }
 }
 
+impl From<Date> for NaiveDate {
+    fn from(date: Date) -> Self {
+        NaiveDate::from_ymd_opt(
+            i32::from(date.year),
+            u32::from(date.month),
+            u32::from(date.day),
+        )
+        .expect("Invalid date conversion")
+    }
+}
+
 impl Display for Date {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{:04}-{:02}-{:02}", self.year, self.month, self.day)
