@@ -20,6 +20,11 @@ pub enum SpudTypes {
     String = 0x0F,
     BinaryBlob = 0x14,
 
+    // Date and Time Types
+    MiniDateTime = 0x17,
+    DateTime = 0x18,
+    TimeStamp = 0x19,
+
     // Composite Type Delimiters
     ArrayStart = 0x10,
     ArrayEnd = 0x11,
@@ -58,6 +63,9 @@ impl SpudTypes {
             0x14 => Some(SpudTypes::BinaryBlob),
             0x15 => Some(SpudTypes::ObjectId),
             0x16 => Some(SpudTypes::Decimal),
+            0x17 => Some(SpudTypes::MiniDateTime),
+            0x18 => Some(SpudTypes::DateTime),
+            0x19 => Some(SpudTypes::TimeStamp),
             _ => None,
         }
     }
