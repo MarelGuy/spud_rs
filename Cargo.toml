@@ -13,15 +13,21 @@ description = "A Rust library for parsing the SPUD binary format."
 
 [dependencies]
 chrono = { version = "0.4.41", default-features = false, features = ["clock"] }
-indexmap = { version = "2.9.0", features = ["serde"] }
+indexmap = { version = "2.9.0", default-features = false, features = [
+    "serde",
+    "std",
+] }
 
-rust_decimal = "1.37.2"
-serde_json = "1.0.140"
-getrandom = "0.3.3"
-tracing = "0.1.41"
-bs58 = "0.5.1"
+rust_decimal = { version = "1.37.2", default-features = false, features = [
+    "std",
+] }
+serde_json = { version = "1.0.140", default-features = false, features = [
+    "std",
+] }
+getrandom = { version = "0.3.3", default-features = false, features = ["std"] }
+bs58 = { version = "0.5.1", default-features = false, features = ["std"] }
 
-tokio = { version = "1.45.1", features = [
+tokio = { version = "1.45.1", default-features = false, features = [
     "rt-multi-thread",
     "fs",
     "io-util",
