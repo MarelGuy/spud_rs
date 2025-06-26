@@ -1,5 +1,5 @@
 #![allow(clippy::too_many_lines)]
-use std::{env, error::Error, path::Path};
+use std::{error::Error, path::Path};
 
 use indexmap::IndexMap;
 use rust_decimal::Decimal;
@@ -17,7 +17,7 @@ use std::{
     io::Write,
 };
 
-use crate::spud_types::SpudTypes;
+use crate::{SPUD_VERSION, spud_types::SpudTypes};
 
 /// The `SpudDecoder` is responsible for decoding SPUD files into a JSON format.
 #[derive(Default, Debug, Clone)]
@@ -41,11 +41,7 @@ impl SpudDecoder {
     ///
     /// Panics if the SPUD version environment variable is not set or if the file is invalid.
     pub fn new(file: &[u8]) -> Result<Self, Box<dyn Error>> {
-        let spud_version_env: Result<String, env::VarError> = env::var("SPUD_VERSION");
-
-        let spud_version: &str = &spud_version_env?;
-
-        let spud_version_bytes: Vec<u8> = spud_version.as_bytes().to_vec();
+        let spud_version_bytes: Vec<u8> = SPUD_VERSION.as_bytes().to_vec();
         let spud_version_len: usize = spud_version_bytes.len();
 
         let (file_version, file_contents): (&[u8], &[u8]) = file.split_at(spud_version_len);
@@ -535,7 +531,6 @@ impl SpudDecoder {
     }
 
     #[cfg(not(feature = "async"))]
-    #[must_use]
     /// Creates a new `SpudDecoder` instance from a file at the specified path.
     ///
     /// # Arguments
@@ -546,13 +541,17 @@ impl SpudDecoder {
     ///
     /// Will panic if the path is invalid
     ///
+    /// # Errors
+    ///
+    /// Will return an error if the path is invalid
+    ///
     /// # Notes
     ///
     /// There is an async version of this function available if the `async` feature is enabled.
     pub fn new_from_path(path: &str) -> Result<Self, Box<dyn Error>> {
         let file: Vec<u8> = std_read(path)?;
 
-        Ok(Self::new(&file)?)
+        Self::new(&file)
     }
 
     #[cfg(feature = "async")]
@@ -584,6 +583,10 @@ impl SpudDecoder {
     /// # Panics
     ///
     /// Panics if the file has errors being written
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if the file has errors being written
     ///
     /// # Notes
     ///

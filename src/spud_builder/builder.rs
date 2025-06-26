@@ -186,6 +186,10 @@ impl SpudBuilder {
     ///
     /// Will panic if the path is invalid
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the path is invalid
+    ///
     /// # Notes
     ///
     /// There is an async version of this function available if the `async` feature is enabled.
