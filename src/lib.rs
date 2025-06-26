@@ -1,3 +1,5 @@
+pub const SPUD_VERSION: &str = "SPUD-0.3.0";
+
 pub mod types;
 
 mod functions;
