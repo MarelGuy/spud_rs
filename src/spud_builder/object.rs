@@ -99,7 +99,7 @@ impl SpudObject {
         let oid: ObjectId = ObjectId::new()?;
 
         data.push(SpudTypes::ObjectId as u8);
-        data.extend_from_slice(&oid.0);
+        data.extend_from_slice(oid.as_bytes());
 
         Ok(oid)
     }

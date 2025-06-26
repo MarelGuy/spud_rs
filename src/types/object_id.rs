@@ -18,8 +18,8 @@ use super::spud_string::SpudString;
 /// - 3 bytes for a counter that increments with each new `ObjectId` generated.
 ///   The `ObjectId` is designed to be unique across different instances and time, ensuring that each object can be distinctly identified.
 ///   The default display format is a base58-encoded string representation of the identifier.
-#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub struct ObjectId(pub(crate) [u8; 10]);
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ObjectId([u8; 10]);
 
 static INSTANCE_IDENTIFIER: LazyLock<[u8; 3]> = LazyLock::new(|| {
     let mut instance_bytes: [u8; 3] = [0u8; 3];
@@ -46,7 +46,7 @@ impl ObjectId {
         let timestamp_secs: u32 = if let Ok(value) = u32::try_from(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .expect("System time is before UNIX EPOCH, which should not happen.")
+                .map_err(|_| "System time is before UNIX EPOCH, which should not happen.")?
                 .as_secs(),
         ) {
             value
@@ -65,6 +65,12 @@ impl ObjectId {
 
         Ok(ObjectId(id))
     }
+
+    #[must_use]
+    /// Returns the 10-byte representation of the `ObjectId`.
+    pub fn as_bytes(&self) -> &[u8; 10] {
+        &self.0
+    }
 }
 
 impl Display for ObjectId {
@@ -73,19 +79,35 @@ impl Display for ObjectId {
     }
 }
 
-impl From<&str> for ObjectId {
-    fn from(s: &str) -> Self {
-        let decoded: Vec<u8> = bs58::decode(s).into_vec().expect("Failed to decode base58");
+impl TryFrom<&str> for ObjectId {
+    type Error = Box<dyn Error>;
 
-        ObjectId(decoded.try_into().expect("Invalid ObjectId length"))
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        let decoded = bs58::decode(s)
+            .into_vec()
+            .map_err(|e| format!("Failed to decode base58: {e}"))?;
+
+        let bytes: [u8; 10] = decoded
+            .try_into()
+            .map_err(|_| "Invalid ObjectId length".to_string())?;
+
+        Ok(ObjectId(bytes))
     }
 }
 
-impl From<String> for ObjectId {
-    fn from(s: String) -> Self {
-        let decoded: Vec<u8> = bs58::decode(s).into_vec().expect("Failed to decode base58");
+impl TryFrom<String> for ObjectId {
+    type Error = Box<dyn Error>;
 
-        ObjectId(decoded.try_into().expect("Invalid ObjectId length"))
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let decoded = bs58::decode(s)
+            .into_vec()
+            .map_err(|e| format!("Failed to decode base58: {e}"))?;
+
+        Ok(ObjectId(
+            decoded
+                .try_into()
+                .map_err(|_| "Invalid ObjectId length".to_string())?,
+        ))
     }
 }
 
@@ -95,17 +117,19 @@ impl From<[u8; 10]> for ObjectId {
     }
 }
 
-impl From<SpudString> for ObjectId {
-    fn from(value: SpudString) -> Self {
-        let decoded: Vec<u8> = bs58::decode(&value.0)
+impl TryFrom<SpudString> for ObjectId {
+    type Error = Box<dyn Error>;
+
+    fn try_from(value: SpudString) -> Result<Self, Self::Error> {
+        let decoded = bs58::decode(value.as_bytes())
             .into_vec()
-            .expect("Failed to decode base58");
+            .map_err(|e| format!("Failed to decode base58: {e}"))?;
 
         let mut id: [u8; 10] = [0u8; 10];
 
         id.copy_from_slice(&decoded);
 
-        ObjectId(id)
+        Ok(ObjectId(id))
     }
 }
 

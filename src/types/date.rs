@@ -1,6 +1,7 @@
 use core::{fmt, str::FromStr};
+use std::error::Error;
 
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, NaiveDate, NaiveDateTime};
 
 pub struct Date {
     year: u16,
@@ -8,13 +9,27 @@ pub struct Date {
     day: u8,
 }
 
-impl From<NaiveDate> for Date {
-    fn from(date: NaiveDate) -> Self {
-        Date {
-            year: u16::try_from(date.year()).expect("Invalid year"),
-            month: u8::try_from(date.month()).expect("Invalid month"),
-            day: u8::try_from(date.day()).expect("Invalid day"),
-        }
+impl TryFrom<NaiveDate> for Date {
+    type Error = Box<dyn Error>;
+
+    fn try_from(date: NaiveDate) -> Result<Self, Self::Error> {
+        Ok(Date {
+            year: u16::try_from(date.year()).map_err(|_| "Invalid year")?,
+            month: u8::try_from(date.month()).map_err(|_| "Invalid month")?,
+            day: u8::try_from(date.day()).map_err(|_| "Invalid day")?,
+        })
+    }
+}
+
+impl TryFrom<NaiveDateTime> for Date {
+    type Error = Box<dyn Error>;
+
+    fn try_from(date: NaiveDateTime) -> Result<Self, Self::Error> {
+        Ok(Date {
+            year: u16::try_from(date.year()).map_err(|_| "Invalid year")?,
+            month: u8::try_from(date.month()).map_err(|_| "Invalid month")?,
+            day: u8::try_from(date.day()).map_err(|_| "Invalid day")?,
+        })
     }
 }
 
@@ -35,14 +50,16 @@ impl FromStr for Date {
     }
 }
 
-impl From<Date> for NaiveDate {
-    fn from(date: Date) -> Self {
+impl TryFrom<Date> for NaiveDate {
+    type Error = Box<dyn Error>;
+
+    fn try_from(date: Date) -> Result<Self, Self::Error> {
         NaiveDate::from_ymd_opt(
             i32::from(date.year),
             u32::from(date.month),
             u32::from(date.day),
         )
-        .expect("Invalid date conversion")
+        .ok_or_else(|| "Invalid date conversion".into())
     }
 }
 

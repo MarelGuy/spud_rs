@@ -1,4 +1,5 @@
 use core::{fmt, str::FromStr};
+use std::error::Error;
 
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
@@ -9,12 +10,13 @@ pub struct DateTime {
     time: Time,
 }
 
-impl From<NaiveDateTime> for DateTime {
-    fn from(date_time: NaiveDateTime) -> Self {
-        DateTime {
-            date: Date::from(date_time.date()),
-            time: Time::from(date_time.time()),
-        }
+impl TryFrom<NaiveDateTime> for DateTime {
+    type Error = Box<dyn Error>;
+    fn try_from(date_time: NaiveDateTime) -> Result<Self, Self::Error> {
+        Ok(DateTime {
+            date: Date::try_from(date_time.date())?,
+            time: Time::try_from(date_time.time())?,
+        })
     }
 }
 
@@ -35,12 +37,14 @@ impl FromStr for DateTime {
     }
 }
 
-impl From<DateTime> for NaiveDateTime {
-    fn from(date_time: DateTime) -> Self {
-        NaiveDateTime::new(
-            NaiveDate::from(date_time.date),
-            NaiveTime::from(date_time.time),
-        )
+impl TryFrom<DateTime> for NaiveDateTime {
+    type Error = Box<dyn Error>;
+
+    fn try_from(date_time: DateTime) -> Result<Self, Self::Error> {
+        Ok(NaiveDateTime::new(
+            NaiveDate::try_from(date_time.date)?,
+            NaiveTime::try_from(date_time.time)?,
+        ))
     }
 }
 

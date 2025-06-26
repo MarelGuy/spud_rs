@@ -38,7 +38,7 @@ macro_rules! impl_spud_type_ext {
                 fn write_spud_bytes(&self, data: &mut Vec<u8>) {
                     data.push(SpudTypes::$spud_type as u8);
 
-                    $write_fn(self.clone(), data);
+                    $write_fn(*self, data);
                 }
             }
         )+
@@ -77,12 +77,37 @@ impl<T: SpudTypesExt> SpudTypesExt for &[T] {
     }
 }
 
+impl SpudTypesExt for SpudString {
+    fn get_spud_type_tag(&self) -> SpudTypes {
+        SpudTypes::String
+    }
+
+    fn write_spud_bytes(&self, data: &mut Vec<u8>) {
+        data.push(SpudTypes::String as u8);
+
+        add_value_length(data, self.len());
+
+        data.extend_from_slice(self.as_bytes());
+    }
+}
+
+impl SpudTypesExt for BinaryBlobStruct<'_> {
+    fn get_spud_type_tag(&self) -> SpudTypes {
+        SpudTypes::BinaryBlob
+    }
+
+    fn write_spud_bytes(&self, data: &mut Vec<u8>) {
+        data.push(SpudTypes::BinaryBlob as u8);
+
+        add_value_length(data, self.0.len());
+
+        data.extend_from_slice(self.0);
+    }
+}
+
 impl_spud_primitive_writer_le!(u8, i8, i16, u16, i32, u32, f32, i64, u64, f64);
+
 impl_spud_type_ext! {
-    SpudString, String, write_string,
-    BinaryBlobStruct<'_>, BinaryBlob, write_blob,
-    Decimal, Decimal, write_decimal,
-    bool, Bool, write_bool,
     i8, I8, write_primitive_value,
     u8, U8, write_primitive_value,
     i16, I16, write_primitive_value,
@@ -93,19 +118,9 @@ impl_spud_type_ext! {
     i64, I64, write_primitive_value,
     u64, U64, write_primitive_value,
     f64, F64, write_primitive_value,
+    Decimal, Decimal, write_decimal,
+    bool, Bool, write_bool,
     (), Null, write_null,
-}
-
-fn write_string(value: &SpudString, data: &mut Vec<u8>) {
-    add_value_length(data, value.0.len());
-
-    data.extend_from_slice(value.0.as_bytes());
-}
-
-fn write_blob(value: &BinaryBlobStruct, data: &mut Vec<u8>) {
-    add_value_length(data, value.0.len());
-
-    data.extend_from_slice(value.0);
 }
 
 fn write_bool(value: bool, data: &mut Vec<u8>) {

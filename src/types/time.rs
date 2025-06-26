@@ -1,6 +1,8 @@
 use core::{fmt, str::FromStr};
 
-use chrono::{NaiveTime, Timelike};
+use std::error::Error;
+
+use chrono::{NaiveDateTime, NaiveTime, Timelike};
 
 pub struct Time {
     hour: u8,
@@ -9,31 +11,46 @@ pub struct Time {
     nanosecond: u32,
 }
 
-impl From<NaiveTime> for Time {
-    fn from(time: NaiveTime) -> Self {
-        Time {
-            hour: u8::try_from(time.hour()).expect("hour out of range"),
-            minute: u8::try_from(time.minute()).expect("minute out of range"),
-            second: u8::try_from(time.second()).expect("second out of range"),
+impl TryFrom<NaiveTime> for Time {
+    type Error = Box<dyn Error>;
+
+    fn try_from(time: NaiveTime) -> Result<Self, Self::Error> {
+        Ok(Time {
+            hour: u8::try_from(time.hour()).map_err(|_| "hour out of range")?,
+            minute: u8::try_from(time.minute()).map_err(|_| "minute out of range")?,
+            second: u8::try_from(time.second()).map_err(|_| "second out of range")?,
             nanosecond: time.nanosecond(),
-        }
+        })
+    }
+}
+
+impl TryFrom<NaiveDateTime> for Time {
+    type Error = Box<dyn Error>;
+
+    fn try_from(time: NaiveDateTime) -> Result<Self, Self::Error> {
+        Ok(Time {
+            hour: u8::try_from(time.hour()).map_err(|_| "hour out of range")?,
+            minute: u8::try_from(time.minute()).map_err(|_| "minute out of range")?,
+            second: u8::try_from(time.second()).map_err(|_| "second out of range")?,
+            nanosecond: time.nanosecond(),
+        })
     }
 }
 
 impl FromStr for Time {
-    type Err = core::fmt::Error;
+    type Err = fmt::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split(':').collect();
         if parts.len() != 3 && parts.len() != 4 {
-            return Err(core::fmt::Error);
+            return Err(fmt::Error);
         }
 
-        let hour: u8 = u8::from_str(parts[0]).map_err(|_| core::fmt::Error)?;
-        let minute: u8 = u8::from_str(parts[1]).map_err(|_| core::fmt::Error)?;
-        let second: u8 = u8::from_str(parts[2]).map_err(|_| core::fmt::Error)?;
+        let hour: u8 = u8::from_str(parts[0]).map_err(|_| fmt::Error)?;
+        let minute: u8 = u8::from_str(parts[1]).map_err(|_| fmt::Error)?;
+        let second: u8 = u8::from_str(parts[2]).map_err(|_| fmt::Error)?;
         let nanosecond = if parts.len() == 4 {
-            u32::from_str(parts[3]).map_err(|_| core::fmt::Error)?
+            u32::from_str(parts[3]).map_err(|_| fmt::Error)?
         } else {
             0
         };
@@ -47,15 +64,17 @@ impl FromStr for Time {
     }
 }
 
-impl From<Time> for NaiveTime {
-    fn from(time: Time) -> Self {
+impl TryFrom<Time> for NaiveTime {
+    type Error = Box<dyn Error>;
+
+    fn try_from(time: Time) -> Result<Self, Self::Error> {
         NaiveTime::from_hms_nano_opt(
             u32::from(time.hour),
             u32::from(time.minute),
             u32::from(time.second),
             time.nanosecond,
         )
-        .expect("Invalid time conversion")
+        .ok_or_else(|| "Invalid time conversion".into())
     }
 }
 

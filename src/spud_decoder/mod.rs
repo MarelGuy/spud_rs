@@ -50,7 +50,9 @@ impl SpudDecoder {
 
         let (file_version, file_contents): (&[u8], &[u8]) = file.split_at(spud_version_len);
 
-        assert!(file_version == spud_version_bytes, "Invalid spud file");
+        if file_version != spud_version_bytes {
+            return Err("Invalid SPUD file: version mismatch".into());
+        }
 
         let mut file_contents: Vec<u8> = file_contents.to_vec();
 
@@ -239,7 +241,9 @@ impl SpudDecoder {
             .field_names
             .get(&field_name_id)
             .cloned()
-            .expect("Field name not found");
+            .ok_or_else(|| {
+                "Field name ID {field_name_id} not found in field names map".to_string()
+            })?;
 
         Ok(1)
     }
@@ -263,11 +267,15 @@ impl SpudDecoder {
         let read_bytes: Vec<u8> = self.read_bytes(usize::try_from(read_byte_value)?)?;
 
         Ok(match read_byte_value {
-            1 => u8::from_le_bytes(read_bytes.try_into().expect("Invalid U8 bytes")) as usize,
-            2 => u16::from_le_bytes(read_bytes.try_into().expect("Invalid U16 bytes")) as usize,
-            4 => u32::from_le_bytes(read_bytes.try_into().expect("Invalid U32 bytes")) as usize,
+            1 => u8::from_le_bytes(read_bytes.try_into().map_err(|_| "Invalid U8 bytes")?) as usize,
+            2 => {
+                u16::from_le_bytes(read_bytes.try_into().map_err(|_| "Invalid U16 bytes")?) as usize
+            }
+            4 => {
+                u32::from_le_bytes(read_bytes.try_into().map_err(|_| "Invalid U32 bytes")?) as usize
+            }
             8 => usize::try_from(u64::from_le_bytes(
-                read_bytes.try_into().expect("Invalid U64 bytes"),
+                read_bytes.try_into().map_err(|_| "Invalid U64 bytes")?,
             ))?,
             _ => unreachable!(),
         })
@@ -316,7 +324,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(1)?;
 
                     Value::Number(Number::from(u8::from_le_bytes(
-                        read_bytes.try_into().expect("Invalid U8 bytes"),
+                        read_bytes.try_into().map_err(|_| "Invalid U8 bytes")?,
                     )))
                 }
                 Some(SpudTypes::U16) => {
@@ -325,7 +333,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(2)?;
 
                     Value::Number(Number::from(u16::from_le_bytes(
-                        read_bytes.try_into().expect("Invalid U16 bytes"),
+                        read_bytes.try_into().map_err(|_| "Invalid U16 bytes")?,
                     )))
                 }
                 Some(SpudTypes::U32) => {
@@ -334,7 +342,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(4)?;
 
                     Value::Number(Number::from(u32::from_le_bytes(
-                        read_bytes.try_into().expect("Invalid U32 bytes"),
+                        read_bytes.try_into().map_err(|_| "Invalid U32 bytes")?,
                     )))
                 }
                 Some(SpudTypes::U64) => {
@@ -343,7 +351,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(8)?;
 
                     Value::Number(Number::from(u64::from_le_bytes(
-                        read_bytes.try_into().expect("Invalid U64 bytes"),
+                        read_bytes.try_into().map_err(|_| "Invalid U64 bytes")?,
                     )))
                 }
                 Some(SpudTypes::I8) => {
@@ -352,7 +360,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(1)?;
 
                     Value::Number(Number::from(i8::from_le_bytes(
-                        read_bytes.try_into().expect("Invalid I8 bytes"),
+                        read_bytes.try_into().map_err(|_| "Invalid I8 bytes")?,
                     )))
                 }
                 Some(SpudTypes::I16) => {
@@ -361,7 +369,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(2)?;
 
                     Value::Number(Number::from(i16::from_le_bytes(
-                        read_bytes.try_into().expect("Invalid I16 bytes"),
+                        read_bytes.try_into().map_err(|_| "Invalid I16 bytes")?,
                     )))
                 }
                 Some(SpudTypes::I32) => {
@@ -370,7 +378,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(4)?;
 
                     Value::Number(Number::from(i32::from_le_bytes(
-                        read_bytes.try_into().expect("Invalid I32 bytes"),
+                        read_bytes.try_into().map_err(|_| "Invalid I32 bytes")?,
                     )))
                 }
                 Some(SpudTypes::I64) => {
@@ -379,7 +387,7 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(8)?;
 
                     Value::Number(Number::from(i64::from_le_bytes(
-                        read_bytes.try_into().expect("Invalid I64 bytes"),
+                        read_bytes.try_into().map_err(|_| "Invalid I64 bytes")?,
                     )))
                 }
                 Some(SpudTypes::F32) => {
@@ -389,10 +397,12 @@ impl SpudDecoder {
 
                     Value::Number(
                         Number::from_f64(
-                            f32::from_le_bytes(read_bytes.try_into().expect("Invalid F32 bytes"))
-                                .into(),
+                            f32::from_le_bytes(
+                                read_bytes.try_into().map_err(|_| "Invalid F32 bytes")?,
+                            )
+                            .into(),
                         )
-                        .expect("Invalid F32 number"),
+                        .ok_or("Invalid F32 value: cannot be NaN or infinity")?,
                     )
                 }
                 Some(SpudTypes::F64) => {
@@ -402,9 +412,9 @@ impl SpudDecoder {
 
                     Value::Number(
                         Number::from_f64(f64::from_le_bytes(
-                            read_bytes.try_into().expect("Invalid F64 bytes"),
+                            read_bytes.try_into().map_err(|_| "Invalid F64 bytes")?,
                         ))
-                        .expect("Invalid F64 number"),
+                        .ok_or("Invalid F64 value: cannot be NaN or infinity")?,
                     )
                 }
                 Some(SpudTypes::Decimal) => {
@@ -412,8 +422,9 @@ impl SpudDecoder {
 
                     let read_bytes: Vec<u8> = self.read_bytes(16)?;
 
-                    let decimal_value: Decimal =
-                        Decimal::deserialize(read_bytes.try_into().expect("Invalid Decimal bytes"));
+                    let decimal_value: Decimal = Decimal::deserialize(
+                        read_bytes.try_into().map_err(|_| "Invalid Decimal bytes")?,
+                    );
 
                     Value::String(decimal_value.to_string())
                 }
