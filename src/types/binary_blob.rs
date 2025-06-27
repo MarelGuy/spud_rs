@@ -2,7 +2,7 @@ use core::{fmt, ops::Deref};
 
 /// Struct representing a binary blob for SPUD encoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct BinaryBlob<'a>(pub(crate) &'a [u8]);
+pub struct BinaryBlob<'a>(&'a [u8]);
 
 impl<'a> BinaryBlob<'a> {
     #[must_use]
