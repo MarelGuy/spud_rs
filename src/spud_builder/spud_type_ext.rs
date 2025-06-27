@@ -9,6 +9,7 @@ use crate::{
 trait SpudPrimitiveWriter {
     fn write_primitive(self, data: &mut Vec<u8>);
 }
+
 pub trait SpudTypesExt {
     fn get_spud_type_tag(&self) -> SpudTypes;
     fn write_spud_bytes(&self, data: &mut Vec<u8>);
@@ -60,7 +61,6 @@ impl_spud_type_ext! {
     Decimal, Decimal, write_decimal,
     bool, Bool, write_bool,
     (), Null, write_null,
-    BinaryBlobStruct<'_>, BinaryBlob, write_binary_blob,
 }
 
 fn write_bool(value: bool, data: &mut Vec<u8>) {
@@ -79,14 +79,6 @@ fn write_decimal(value: Decimal, data: &mut Vec<u8>) {
     let value_data: [u8; 16] = value.serialize();
 
     data.extend_from_slice(&value_data);
-}
-
-fn write_binary_blob(value: BinaryBlobStruct<'_>, data: &mut Vec<u8>) {
-    data.push(SpudTypes::BinaryBlob as u8);
-
-    add_value_length(data, value.len());
-
-    data.extend_from_slice(value.bytes());
 }
 
 impl<T: SpudTypesExt> SpudTypesExt for Vec<T> {
@@ -132,5 +124,19 @@ impl SpudTypesExt for SpudString {
         add_value_length(data, self.len());
 
         data.extend_from_slice(self.as_bytes());
+    }
+}
+
+impl SpudTypesExt for BinaryBlobStruct<'_> {
+    fn get_spud_type_tag(&self) -> SpudTypes {
+        SpudTypes::BinaryBlob
+    }
+
+    fn write_spud_bytes(&self, data: &mut Vec<u8>) {
+        data.push(SpudTypes::BinaryBlob as u8);
+
+        add_value_length(data, self.len());
+
+        data.extend_from_slice(self.bytes());
     }
 }
