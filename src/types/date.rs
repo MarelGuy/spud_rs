@@ -1,7 +1,8 @@
 use core::{fmt, str::FromStr};
-use std::error::Error;
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
+
+use crate::SpudError;
 
 /// A struct representing a date in the format YYYY-MM-DD.
 /// This struct can be created from chrono's `NaiveDate` or `NaiveDateTime`,
@@ -19,10 +20,12 @@ impl Date {
     /// # Errors
     ///
     /// Returns an error if the month is not between 1 and 12, or if the day is not valid for the given month and year.
-    pub fn new(year: u16, month: u8, day: u8) -> Result<Self, Box<dyn Error>> {
+    pub fn new(year: u16, month: u8, day: u8) -> Result<Self, SpudError> {
         // Il controllo sul mese rimane invariato
         if !(1..=12).contains(&month) {
-            return Err("Il mese deve essere compreso tra 1 e 12".into());
+            return Err(SpudError::ValidationError(
+                "Il mese deve essere compreso tra 1 e 12".into(),
+            ));
         }
 
         // Determiniamo il numero massimo di giorni per il mese inserito
@@ -45,10 +48,9 @@ impl Date {
 
         // Ora controlliamo che il giorno sia valido per quel mese specifico
         if !(1..=max_days).contains(&day) {
-            return Err(format!(
+            return Err(SpudError::ValidationError(format!(
                 "Giorno non valido. Il mese {month} dell'anno {year} ha {max_days} giorni."
-            )
-            .into());
+            )));
         }
 
         Ok(Date { year, month, day })
@@ -64,25 +66,31 @@ impl Date {
 }
 
 impl TryFrom<NaiveDate> for Date {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(date: NaiveDate) -> Result<Self, Self::Error> {
         Ok(Date {
-            year: u16::try_from(date.year()).map_err(|_| "Invalid year")?,
-            month: u8::try_from(date.month()).map_err(|_| "Invalid month")?,
-            day: u8::try_from(date.day()).map_err(|_| "Invalid day")?,
+            year: u16::try_from(date.year())
+                .map_err(|_| SpudError::ValidationError("Invalid year".to_owned()))?,
+            month: u8::try_from(date.month())
+                .map_err(|_| SpudError::ValidationError("Invalid month".to_owned()))?,
+            day: u8::try_from(date.day())
+                .map_err(|_| SpudError::ValidationError("Invalid day".to_owned()))?,
         })
     }
 }
 
 impl TryFrom<NaiveDateTime> for Date {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(date: NaiveDateTime) -> Result<Self, Self::Error> {
         Ok(Date {
-            year: u16::try_from(date.year()).map_err(|_| "Invalid year")?,
-            month: u8::try_from(date.month()).map_err(|_| "Invalid month")?,
-            day: u8::try_from(date.day()).map_err(|_| "Invalid day")?,
+            year: u16::try_from(date.year())
+                .map_err(|_| SpudError::ValidationError("Invalid year".to_owned()))?,
+            month: u8::try_from(date.month())
+                .map_err(|_| SpudError::ValidationError("Invalid month".to_owned()))?,
+            day: u8::try_from(date.day())
+                .map_err(|_| SpudError::ValidationError("Invalid day".to_owned()))?,
         })
     }
 }
@@ -105,7 +113,7 @@ impl FromStr for Date {
 }
 
 impl TryFrom<Date> for NaiveDate {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(date: Date) -> Result<Self, Self::Error> {
         NaiveDate::from_ymd_opt(
@@ -113,7 +121,7 @@ impl TryFrom<Date> for NaiveDate {
             u32::from(date.month),
             u32::from(date.day),
         )
-        .ok_or_else(|| "Invalid date conversion".into())
+        .ok_or_else(|| SpudError::ValidationError("Invalid date".to_owned()))
     }
 }
 

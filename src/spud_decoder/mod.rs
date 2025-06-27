@@ -1,5 +1,5 @@
 #![allow(clippy::too_many_lines)]
-use std::{error::Error, path::Path};
+use std::path::Path;
 
 use indexmap::IndexMap;
 use rust_decimal::Decimal;
@@ -18,7 +18,7 @@ use std::{
 };
 
 use crate::{
-    SPUD_VERSION,
+    SPUD_VERSION, SpudError,
     spud_types::SpudTypes,
     types::{Date, Time},
 };
@@ -44,14 +44,16 @@ impl SpudDecoder {
     /// # Panics
     ///
     /// Panics if the SPUD version environment variable is not set or if the file is invalid.
-    pub fn new(file: &[u8]) -> Result<Self, Box<dyn Error>> {
+    pub fn new(file: &[u8]) -> Result<Self, SpudError> {
         let spud_version_bytes: Vec<u8> = SPUD_VERSION.as_bytes().to_vec();
         let spud_version_len: usize = spud_version_bytes.len();
 
         let (file_version, file_contents): (&[u8], &[u8]) = file.split_at(spud_version_len);
 
         if file_version != spud_version_bytes {
-            return Err("Invalid SPUD file: version mismatch".into());
+            return Err(SpudError::DecodingError(
+                "Invalid SPUD file: version mismatch".to_owned(),
+            ));
         }
 
         let mut file_contents: Vec<u8> = file_contents.to_vec();
@@ -97,7 +99,9 @@ impl SpudDecoder {
 
                 file_contents = file_content.to_vec();
             }
-            None => Err("Invalid SPUD file: missing field name list end byte".to_string())?,
+            None => Err(SpudError::DecodingError(
+                "Invalid SPUD file: missing field name list end byte".to_owned(),
+            ))?,
         }
 
         Ok(Self {
@@ -120,7 +124,7 @@ impl SpudDecoder {
     /// # Errors
     ///
     /// Returns an error if serde fails to serialize the file
-    pub fn decode(&mut self, pretty: bool, want_array: bool) -> Result<&str, Box<dyn Error>> {
+    pub fn decode(&mut self, pretty: bool, want_array: bool) -> Result<&str, SpudError> {
         let objects: Vec<Vec<u8>> = self.get_objects();
 
         for object in objects {
@@ -152,14 +156,16 @@ impl SpudDecoder {
                 self.output_json = json;
             }
             Err(err) => {
-                Err(format!("Failed to serialize JSON: {err}"))?;
+                Err(SpudError::DecodingError(format!(
+                    "Failed to serialize JSON: {err}"
+                )))?;
             }
         }
 
         Ok(self.output_json.as_str())
     }
 
-    fn decode_object(&mut self) -> Result<IndexMap<String, Value>, Box<dyn Error>> {
+    fn decode_object(&mut self) -> Result<IndexMap<String, Value>, SpudError> {
         let mut object: IndexMap<String, Value> = IndexMap::new();
 
         self.next(2)?;
@@ -187,15 +193,14 @@ impl SpudDecoder {
     /// # Panics
     ///
     /// Will panic if the index is out of bounds
-    fn next(&mut self, steps: usize) -> Result<(), Box<dyn Error>> {
+    fn next(&mut self, steps: usize) -> Result<(), SpudError> {
         if self.index + steps >= self.current_object.len() {
-            return Err(format!(
+            return Err(SpudError::DecodingError(format!(
                 "Index out of bounds, current index: {}, object length: {}, tried to read: {}",
                 self.index,
                 self.current_object.len(),
                 self.index + steps
-            )
-            .into());
+            )));
         }
 
         self.index += steps;
@@ -205,7 +210,7 @@ impl SpudDecoder {
         Ok(())
     }
 
-    fn read_bytes(&mut self, steps: usize) -> Result<Vec<u8>, Box<dyn Error>> {
+    fn read_bytes(&mut self, steps: usize) -> Result<Vec<u8>, SpudError> {
         let result: Vec<u8> = self.current_object[self.index..self.index + steps].to_vec();
 
         self.next(steps)?;
@@ -238,7 +243,7 @@ impl SpudDecoder {
         objects
     }
 
-    fn read_field_name(&mut self) -> Result<usize, Box<dyn Error>> {
+    fn read_field_name(&mut self) -> Result<usize, SpudError> {
         self.next(1)?;
 
         let field_name_id: u8 = self.current_object[self.index];
@@ -248,7 +253,9 @@ impl SpudDecoder {
             .get(&field_name_id)
             .cloned()
             .ok_or_else(|| {
-                "Field name ID {field_name_id} not found in field names map".to_string()
+                SpudError::DecodingError(format!(
+                    "Field name ID {field_name_id} not found in field names map"
+                ))
             })?;
 
         Ok(1)
@@ -257,7 +264,7 @@ impl SpudDecoder {
     /// # Panics
     ///
     /// Will panic on unknown token
-    fn read_variable_length_data(&mut self) -> Result<usize, Box<dyn Error>> {
+    fn read_variable_length_data(&mut self) -> Result<usize, SpudError> {
         self.next(1)?;
 
         let read_byte_value: u64 = match self.current_byte {
@@ -265,7 +272,9 @@ impl SpudDecoder {
             val if val == SpudTypes::U16 as u8 => 2,
             val if val == SpudTypes::U32 as u8 => 4,
             val if val == SpudTypes::U64 as u8 => 8,
-            _ => Err("Expected: U8, U16, U32, U64, but got an unknown token".to_string())?,
+            _ => Err(SpudError::DecodingError(
+                "Expected: U8, U16, U32, U64, but got an unknown token".to_string(),
+            ))?,
         };
 
         self.next(1)?;
@@ -273,25 +282,35 @@ impl SpudDecoder {
         let read_bytes: Vec<u8> = self.read_bytes(usize::try_from(read_byte_value)?)?;
 
         Ok(match read_byte_value {
-            1 => u8::from_le_bytes(read_bytes.try_into().map_err(|_| "Invalid U8 bytes")?) as usize,
-            2 => {
-                u16::from_le_bytes(read_bytes.try_into().map_err(|_| "Invalid U16 bytes")?) as usize
+            1 => u8::from_le_bytes(
+                read_bytes
+                    .try_into()
+                    .map_err(|_| SpudError::DecodingError("Invalid U8 bytes".to_owned()))?,
+            ) as usize,
+            2 => u16::from_le_bytes(
+                read_bytes
+                    .try_into()
+                    .map_err(|_| SpudError::DecodingError("Invalid U16 bytes".to_owned()))?,
+            ) as usize,
+            4 => u32::from_le_bytes(
+                read_bytes
+                    .try_into()
+                    .map_err(|_| SpudError::DecodingError("Invalid U32 bytes".to_owned()))?,
+            ) as usize,
+            8 => {
+                usize::try_from(u64::from_le_bytes(read_bytes.try_into().map_err(|_| {
+                    SpudError::DecodingError("Invalid U64 bytes".to_owned())
+                })?))?
             }
-            4 => {
-                u32::from_le_bytes(read_bytes.try_into().map_err(|_| "Invalid U32 bytes")?) as usize
-            }
-            8 => usize::try_from(u64::from_le_bytes(
-                read_bytes.try_into().map_err(|_| "Invalid U64 bytes")?,
-            ))?,
             _ => unreachable!(),
         })
     }
 
-    fn read_date(read_bytes: &[u8]) -> Result<Date, Box<dyn Error>> {
+    fn read_date(read_bytes: &[u8]) -> Result<Date, SpudError> {
         let year: u16 = u16::from_le_bytes(
             read_bytes[0..2]
                 .try_into()
-                .map_err(|_| "Invalid Date bytes")?,
+                .map_err(|_| SpudError::DecodingError("Invalid Date bytes".to_owned()))?,
         );
 
         let month: u8 = read_bytes[2];
@@ -300,14 +319,14 @@ impl SpudDecoder {
         Date::new(year, month, day)
     }
 
-    fn read_time(read_bytes: &[u8]) -> Result<Time, Box<dyn Error>> {
+    fn read_time(read_bytes: &[u8]) -> Result<Time, SpudError> {
         let hour: u8 = read_bytes[0];
         let minute: u8 = read_bytes[1];
         let second: u8 = read_bytes[2];
         let nanosecond: u32 = u32::from_le_bytes(
             read_bytes[3..7]
                 .try_into()
-                .map_err(|_| "Invalid Time bytes")?,
+                .map_err(|_| SpudError::DecodingError("Invalid Time bytes".to_owned()))?,
         );
 
         Time::new(hour, minute, second, nanosecond)
@@ -316,7 +335,7 @@ impl SpudDecoder {
     /// # Panics
     ///
     /// Will panic on unknown type
-    fn decode_byte(&mut self, byte: u8) -> Result<Option<Value>, Box<dyn Error>> {
+    fn decode_byte(&mut self, byte: u8) -> Result<Option<Value>, SpudError> {
         let decode_result: Option<SpudTypes> = SpudTypes::from_u8(byte);
 
         let mut next_steps: usize = 0;
@@ -340,10 +359,10 @@ impl SpudDecoder {
                     let value: Value = match self.current_object.get(self.index) {
                         Some(0) => Value::Bool(false),
                         Some(1) => Value::Bool(true),
-                        _ => Err(format!(
+                        _ => Err(SpudError::DecodingError(format!(
                             "Unknown bool value: {}",
                             self.current_object[self.index]
-                        ))?,
+                        )))?,
                     };
 
                     next_steps = 1;
@@ -356,7 +375,9 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(1)?;
 
                     Value::Number(Number::from(u8::from_le_bytes(
-                        read_bytes.try_into().map_err(|_| "Invalid U8 bytes")?,
+                        read_bytes
+                            .try_into()
+                            .map_err(|_| SpudError::DecodingError("Invalid U8 bytes".to_owned()))?,
                     )))
                 }
                 Some(SpudTypes::U16) => {
@@ -365,7 +386,9 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(2)?;
 
                     Value::Number(Number::from(u16::from_le_bytes(
-                        read_bytes.try_into().map_err(|_| "Invalid U16 bytes")?,
+                        read_bytes.try_into().map_err(|_| {
+                            SpudError::DecodingError("Invalid U16 bytes".to_owned())
+                        })?,
                     )))
                 }
                 Some(SpudTypes::U32) => {
@@ -374,7 +397,9 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(4)?;
 
                     Value::Number(Number::from(u32::from_le_bytes(
-                        read_bytes.try_into().map_err(|_| "Invalid U32 bytes")?,
+                        read_bytes.try_into().map_err(|_| {
+                            SpudError::DecodingError("Invalid U32 bytes".to_owned())
+                        })?,
                     )))
                 }
                 Some(SpudTypes::U64) => {
@@ -383,7 +408,9 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(8)?;
 
                     Value::Number(Number::from(u64::from_le_bytes(
-                        read_bytes.try_into().map_err(|_| "Invalid U64 bytes")?,
+                        read_bytes.try_into().map_err(|_| {
+                            SpudError::DecodingError("Invalid U64 bytes".to_owned())
+                        })?,
                     )))
                 }
                 Some(SpudTypes::I8) => {
@@ -392,7 +419,9 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(1)?;
 
                     Value::Number(Number::from(i8::from_le_bytes(
-                        read_bytes.try_into().map_err(|_| "Invalid I8 bytes")?,
+                        read_bytes
+                            .try_into()
+                            .map_err(|_| SpudError::DecodingError("Invalid I8 bytes".to_owned()))?,
                     )))
                 }
                 Some(SpudTypes::I16) => {
@@ -401,7 +430,9 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(2)?;
 
                     Value::Number(Number::from(i16::from_le_bytes(
-                        read_bytes.try_into().map_err(|_| "Invalid I16 bytes")?,
+                        read_bytes.try_into().map_err(|_| {
+                            SpudError::DecodingError("Invalid I16 bytes".to_owned())
+                        })?,
                     )))
                 }
                 Some(SpudTypes::I32) => {
@@ -410,7 +441,9 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(4)?;
 
                     Value::Number(Number::from(i32::from_le_bytes(
-                        read_bytes.try_into().map_err(|_| "Invalid I32 bytes")?,
+                        read_bytes.try_into().map_err(|_| {
+                            SpudError::DecodingError("Invalid I32 bytes".to_owned())
+                        })?,
                     )))
                 }
                 Some(SpudTypes::I64) => {
@@ -419,7 +452,9 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(8)?;
 
                     Value::Number(Number::from(i64::from_le_bytes(
-                        read_bytes.try_into().map_err(|_| "Invalid I64 bytes")?,
+                        read_bytes.try_into().map_err(|_| {
+                            SpudError::DecodingError("Invalid I64 bytes".to_owned())
+                        })?,
                     )))
                 }
                 Some(SpudTypes::F32) => {
@@ -429,12 +464,14 @@ impl SpudDecoder {
 
                     Value::Number(
                         Number::from_f64(
-                            f32::from_le_bytes(
-                                read_bytes.try_into().map_err(|_| "Invalid F32 bytes")?,
-                            )
+                            f32::from_le_bytes(read_bytes.try_into().map_err(|_| {
+                                SpudError::DecodingError("Invalid F32 bytes".to_owned())
+                            })?)
                             .into(),
                         )
-                        .ok_or("Invalid F32 value: cannot be NaN or infinity")?,
+                        .ok_or(SpudError::DecodingError(
+                            "Invalid F32 value: cannot be NaN or infinity".to_owned(),
+                        ))?,
                     )
                 }
                 Some(SpudTypes::F64) => {
@@ -443,10 +480,12 @@ impl SpudDecoder {
                     let read_bytes: Vec<u8> = self.read_bytes(8)?;
 
                     Value::Number(
-                        Number::from_f64(f64::from_le_bytes(
-                            read_bytes.try_into().map_err(|_| "Invalid F64 bytes")?,
-                        ))
-                        .ok_or("Invalid F64 value: cannot be NaN or infinity")?,
+                        Number::from_f64(f64::from_le_bytes(read_bytes.try_into().map_err(
+                            |_| SpudError::DecodingError("Invalid F64 bytes".to_owned()),
+                        )?))
+                        .ok_or(SpudError::DecodingError(
+                            "Invalid F64 value: cannot be NaN or infinity".to_owned(),
+                        ))?,
                     )
                 }
                 Some(SpudTypes::Decimal) => {
@@ -454,9 +493,10 @@ impl SpudDecoder {
 
                     let read_bytes: Vec<u8> = self.read_bytes(16)?;
 
-                    let decimal_value: Decimal = Decimal::deserialize(
-                        read_bytes.try_into().map_err(|_| "Invalid Decimal bytes")?,
-                    );
+                    let decimal_value: Decimal =
+                        Decimal::deserialize(read_bytes.try_into().map_err(|_| {
+                            SpudError::DecodingError("Invalid Decimal bytes".to_owned())
+                        })?);
 
                     Value::String(decimal_value.to_string())
                 }
@@ -567,7 +607,10 @@ impl SpudDecoder {
 
                     Value::Object(output_object)
                 }
-                _ => Err(format!("Unknown type: {byte} at index {}", self.index))?,
+                _ => Err(SpudError::DecodingError(format!(
+                    "Unknown type: {byte} at index {}",
+                    self.index
+                )))?,
             };
 
             self.next(next_steps)?;
@@ -588,7 +631,7 @@ impl SpudDecoder {
     /// # Errors
     ///
     /// Will return an error if the path is invalid
-    pub async fn new_from_path(path: &str) -> Result<Self, Box<dyn Error>> {
+    pub async fn new_from_path(path: &str) -> Result<Self, SpudError> {
         let file: Vec<u8> = tokio_read(path).await?;
 
         Self::new(&file)
@@ -612,7 +655,7 @@ impl SpudDecoder {
     /// # Notes
     ///
     /// There is an async version of this function available if the `async` feature is enabled.
-    pub fn new_from_path(path: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn new_from_path(path: &str) -> Result<Self, SpudError> {
         let file: Vec<u8> = std_read(path)?;
 
         Self::new(&file)
@@ -628,7 +671,7 @@ impl SpudDecoder {
     /// # Errors
     ///
     /// Will return an error if the file has errors being written
-    pub async fn build_file(&self, path: &str) -> Result<(), Box<dyn Error>> {
+    pub async fn build_file(&self, path: &str) -> Result<(), SpudError> {
         TokioFile::create(Path::new(path))
             .await?
             .write_all(self.output_json.as_bytes())
@@ -655,7 +698,7 @@ impl SpudDecoder {
     /// # Notes
     ///
     /// There is an async version of this function available if the `async` feature is enabled.
-    pub fn build_file(&self, path: &str) -> Result<(), Box<dyn Error>> {
+    pub fn build_file(&self, path: &str) -> Result<(), SpudError> {
         StdFile::create(Path::new(path))?.write_all(self.output_json.as_bytes())?;
 
         Ok(())

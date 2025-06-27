@@ -1,8 +1,8 @@
 use core::{fmt, str::FromStr};
 
-use std::error::Error;
-
 use chrono::{NaiveDateTime, NaiveTime, Timelike};
+
+use crate::SpudError;
 
 /// A struct representing a time in the format HH:MM:SS.NS.
 /// This struct can be created from chrono's `NaiveTime` or `NaiveDateTime`,
@@ -25,21 +25,29 @@ impl Time {
     /// # Errors
     ///
     /// Returns an error if the hour is not between 0 and 23, minute is not between 0 and 59,
-    pub fn new(hour: u8, minute: u8, second: u8, nanosecond: u32) -> Result<Self, Box<dyn Error>> {
+    pub fn new(hour: u8, minute: u8, second: u8, nanosecond: u32) -> Result<Self, SpudError> {
         if hour > 23 {
-            return Err("Hour must be between 0 and 23".into());
+            return Err(SpudError::ValidationError(
+                "Hour must be between 0 and 23".to_owned(),
+            ));
         }
 
         if minute > 59 {
-            return Err("Minute must be between 0 and 59".into());
+            return Err(SpudError::ValidationError(
+                "Minute must be between 0 and 59".to_owned(),
+            ));
         }
 
         if second > 59 {
-            return Err("Second must be between 0 and 59".into());
+            return Err(SpudError::ValidationError(
+                "Second must be between 0 and 59".to_owned(),
+            ));
         }
 
         if nanosecond >= 1_000_000_000 {
-            return Err("Nanosecond must be less than 1 billion".into());
+            return Err(SpudError::ValidationError(
+                "Nanosecond must be less than 1 billion".to_owned(),
+            ));
         }
 
         Ok(Time {
@@ -61,26 +69,32 @@ impl Time {
 }
 
 impl TryFrom<NaiveTime> for Time {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(time: NaiveTime) -> Result<Self, Self::Error> {
         Ok(Time {
-            hour: u8::try_from(time.hour()).map_err(|_| "hour out of range")?,
-            minute: u8::try_from(time.minute()).map_err(|_| "minute out of range")?,
-            second: u8::try_from(time.second()).map_err(|_| "second out of range")?,
+            hour: u8::try_from(time.hour())
+                .map_err(|_| SpudError::ValidationError("hour out of range".to_owned()))?,
+            minute: u8::try_from(time.minute())
+                .map_err(|_| SpudError::ValidationError("minute out of range".to_owned()))?,
+            second: u8::try_from(time.second())
+                .map_err(|_| SpudError::ValidationError("second out of range".to_owned()))?,
             nanosecond: time.nanosecond(),
         })
     }
 }
 
 impl TryFrom<NaiveDateTime> for Time {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(time: NaiveDateTime) -> Result<Self, Self::Error> {
         Ok(Time {
-            hour: u8::try_from(time.hour()).map_err(|_| "hour out of range")?,
-            minute: u8::try_from(time.minute()).map_err(|_| "minute out of range")?,
-            second: u8::try_from(time.second()).map_err(|_| "second out of range")?,
+            hour: u8::try_from(time.hour())
+                .map_err(|_| SpudError::ValidationError("hour out of range".to_owned()))?,
+            minute: u8::try_from(time.minute())
+                .map_err(|_| SpudError::ValidationError("minute out of range".to_owned()))?,
+            second: u8::try_from(time.second())
+                .map_err(|_| SpudError::ValidationError("second out of range".to_owned()))?,
             nanosecond: time.nanosecond(),
         })
     }
@@ -114,7 +128,7 @@ impl FromStr for Time {
 }
 
 impl TryFrom<Time> for NaiveTime {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(time: Time) -> Result<Self, Self::Error> {
         NaiveTime::from_hms_nano_opt(
@@ -123,7 +137,7 @@ impl TryFrom<Time> for NaiveTime {
             u32::from(time.second),
             time.nanosecond,
         )
-        .ok_or_else(|| "Invalid time conversion".into())
+        .ok_or_else(|| SpudError::ValidationError("Invalid time conversion".to_owned()))
     }
 }
 

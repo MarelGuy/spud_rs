@@ -2,9 +2,9 @@
 
 use core::cell::RefCell;
 use indexmap::IndexMap;
-use std::{error::Error, rc::Rc};
+use std::rc::Rc;
 
-use crate::{functions::generate_u8_id, spud_types::SpudTypes, types::ObjectId};
+use crate::{SpudError, functions::generate_u8_id, spud_types::SpudTypes, types::ObjectId};
 
 use super::{SpudTypesExt, builder::ObjectMap};
 
@@ -23,7 +23,7 @@ impl SpudObject {
         field_names: Rc<RefCell<IndexMap<(String, u8), u8>>>,
         seen_ids: Rc<RefCell<Vec<bool>>>,
         objects: Rc<RefCell<ObjectMap>>,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, SpudError> {
         let data: Rc<RefCell<Vec<u8>>> = Rc::new(RefCell::new(Vec::new()));
 
         data.borrow_mut()
@@ -69,7 +69,7 @@ impl SpudObject {
         &mut self,
         field_name: &str,
         value: T,
-    ) -> Result<&mut Self, Box<dyn Error>> {
+    ) -> Result<&mut Self, SpudError> {
         self.add_field_name(field_name)?;
 
         value.write_spud_bytes(&mut self.data.borrow_mut());
@@ -77,7 +77,7 @@ impl SpudObject {
         Ok(self)
     }
 
-    fn add_field_name(&mut self, field_name: &str) -> Result<&mut Self, Box<dyn Error>> {
+    fn add_field_name(&mut self, field_name: &str) -> Result<&mut Self, SpudError> {
         let key: (String, u8) = (field_name.into(), u8::try_from(field_name.len())?);
 
         let id: u8 = if let Some(value) = self.field_names.borrow().get(&key) {
@@ -95,7 +95,7 @@ impl SpudObject {
         Ok(self)
     }
 
-    fn generate_oid(data: &mut Vec<u8>) -> Result<ObjectId, Box<dyn Error>> {
+    fn generate_oid(data: &mut Vec<u8>) -> Result<ObjectId, SpudError> {
         let oid: ObjectId = ObjectId::new()?;
 
         data.push(SpudTypes::ObjectId as u8);

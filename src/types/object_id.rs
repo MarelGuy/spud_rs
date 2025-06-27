@@ -3,11 +3,12 @@ use core::{
     sync::atomic::{AtomicU32, Ordering},
 };
 use std::{
-    error::Error,
     fmt,
     sync::LazyLock,
     time::{SystemTime, UNIX_EPOCH},
 };
+
+use crate::SpudError;
 
 use super::spud_string::SpudString;
 
@@ -40,18 +41,22 @@ static COUNTER_SEED: LazyLock<u32> = LazyLock::new(|| {
 static ID_COUNTER: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(*COUNTER_SEED));
 
 impl ObjectId {
-    pub(crate) fn new() -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn new() -> Result<Self, SpudError> {
         let mut id: [u8; 10] = [0u8; 10];
 
         let timestamp_secs: u32 = if let Ok(value) = u32::try_from(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .map_err(|_| "System time is before UNIX EPOCH, which should not happen.")?
+                .map_err(|_| {
+                    SpudError::ValidationError("System time is before UNIX epoch".to_string())
+                })?
                 .as_secs(),
         ) {
             value
         } else {
-            return Err("Failed to get current timestamp".to_string())?;
+            return Err(SpudError::ValidationError(
+                "Failed to get current timestamp".to_string(),
+            ));
         };
 
         id[0..4].copy_from_slice(&timestamp_secs.to_le_bytes());
@@ -80,34 +85,32 @@ impl Display for ObjectId {
 }
 
 impl TryFrom<&str> for ObjectId {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         let decoded = bs58::decode(s)
             .into_vec()
-            .map_err(|e| format!("Failed to decode base58: {e}"))?;
+            .map_err(|e| SpudError::ValidationError(format!("Failed to decode base58: {e}")))?;
 
         let bytes: [u8; 10] = decoded
             .try_into()
-            .map_err(|_| "Invalid ObjectId length".to_string())?;
+            .map_err(|_| SpudError::ValidationError("Invalid ObjectId length".to_string()))?;
 
         Ok(ObjectId(bytes))
     }
 }
 
 impl TryFrom<String> for ObjectId {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
         let decoded = bs58::decode(s)
             .into_vec()
-            .map_err(|e| format!("Failed to decode base58: {e}"))?;
+            .map_err(|e| SpudError::ValidationError(format!("Failed to decode base58: {e}")))?;
 
-        Ok(ObjectId(
-            decoded
-                .try_into()
-                .map_err(|_| "Invalid ObjectId length".to_string())?,
-        ))
+        Ok(ObjectId(decoded.try_into().map_err(|_| {
+            SpudError::ValidationError("Invalid ObjectId length".to_string())
+        })?))
     }
 }
 
@@ -118,12 +121,12 @@ impl From<[u8; 10]> for ObjectId {
 }
 
 impl TryFrom<SpudString> for ObjectId {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(value: SpudString) -> Result<Self, Self::Error> {
         let decoded = bs58::decode(value.as_bytes())
             .into_vec()
-            .map_err(|e| format!("Failed to decode base58: {e}"))?;
+            .map_err(|e| SpudError::ValidationError(format!("Failed to decode base58: {e}")))?;
 
         let mut id: [u8; 10] = [0u8; 10];
 

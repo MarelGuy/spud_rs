@@ -1,9 +1,11 @@
 use core::{fmt, str::FromStr};
-use std::error::Error;
 
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
-use crate::types::{Date, Time};
+use crate::{
+    SpudError,
+    types::{Date, Time},
+};
 
 /// A struct representing a date and time in the format YYYY-MM-DD HH:MM:SS.NS.
 /// This struct can be created from chrono's `NaiveDateTime`, and can also be parsed from a string in the same format.
@@ -30,7 +32,7 @@ impl DateTime {
 }
 
 impl TryFrom<NaiveDateTime> for DateTime {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
     fn try_from(date_time: NaiveDateTime) -> Result<Self, Self::Error> {
         Ok(DateTime {
             date: Date::try_from(date_time.date())?,
@@ -57,7 +59,7 @@ impl FromStr for DateTime {
 }
 
 impl TryFrom<DateTime> for NaiveDateTime {
-    type Error = Box<dyn Error>;
+    type Error = SpudError;
 
     fn try_from(date_time: DateTime) -> Result<Self, Self::Error> {
         Ok(NaiveDateTime::new(

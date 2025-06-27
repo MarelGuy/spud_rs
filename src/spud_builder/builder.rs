@@ -2,10 +2,10 @@
 
 use core::cell::RefCell;
 use indexmap::IndexMap;
-use std::error::Error;
 use std::{fmt, path::Path, rc::Rc};
 
 use crate::{
+    SpudError,
     functions::{check_path, initialise_header},
     spud_types::SpudTypes,
     types::ObjectId,
@@ -84,7 +84,7 @@ impl SpudBuilder {
     /// # Note
     /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder, allowing for consistent data management.
     /// Nothing is cloned, SPUD uses `Rc` and `RefCell` to manage shared ownership and mutability.
-    pub fn new_object(&self) -> Result<SpudObject, Box<dyn Error>> {
+    pub fn new_object(&self) -> Result<SpudObject, SpudError> {
         SpudObject::new(
             Rc::clone(&self.field_names),
             Rc::clone(&self.seen_ids),
@@ -159,11 +159,7 @@ impl SpudBuilder {
     /// # Errors
     ///
     /// Returns an error if the path is invalid
-    pub async fn build_file(
-        &mut self,
-        path_str: &str,
-        file_name: &str,
-    ) -> Result<(), Box<dyn Error>> {
+    pub async fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), SpudError> {
         let path_str: String = check_path(path_str, file_name)?;
 
         let path: &Path = Path::new(&path_str);
@@ -193,7 +189,7 @@ impl SpudBuilder {
     /// # Notes
     ///
     /// There is an async version of this function available if the `async` feature is enabled.
-    pub fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), Box<dyn Error>> {
+    pub fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), SpudError> {
         let path_str: String = check_path(path_str, file_name)?;
 
         let path: &Path = Path::new(&path_str);

@@ -1,6 +1,6 @@
-use std::error::Error;
+use crate::SpudError;
 
-pub(crate) fn generate_u8_id(id_vec: &mut Vec<bool>) -> Result<u8, Box<dyn Error>> {
+pub(crate) fn generate_u8_id(id_vec: &mut Vec<bool>) -> Result<u8, SpudError> {
     let mut id: [u8; 1] = [0_u8; 1];
 
     getrandom::fill(&mut id)?;
