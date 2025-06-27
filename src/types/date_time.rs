@@ -17,6 +17,12 @@ pub struct DateTime {
     time: Time,
 }
 
+impl DateTime {
+    pub(crate) fn as_le_bytes(self) -> Vec<u8> {
+        velcro::vec![..self.date.as_le_bytes(), ..self.time.as_le_bytes()]
+    }
+}
+
 impl TryFrom<NaiveDateTime> for DateTime {
     type Error = Box<dyn Error>;
     fn try_from(date_time: NaiveDateTime) -> Result<Self, Self::Error> {

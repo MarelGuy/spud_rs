@@ -3,7 +3,7 @@ use rust_decimal::Decimal;
 use crate::{
     functions::add_value_length,
     spud_types::SpudTypes,
-    types::{BinaryBlob as BinaryBlobStruct, SpudString},
+    types::{BinaryBlob as BinaryBlobStruct, Date, DateTime, SpudString, Time},
 };
 
 trait SpudPrimitiveWriter {
@@ -11,7 +11,6 @@ trait SpudPrimitiveWriter {
 }
 
 pub trait SpudTypesExt {
-    fn get_spud_type_tag(&self) -> SpudTypes;
     fn write_spud_bytes(&self, data: &mut Vec<u8>);
 }
 
@@ -31,10 +30,6 @@ macro_rules! impl_spud_type_ext {
     ($($t:ty, $spud_type:ident, $write_fn:path),+ $(,)?) => {
         $(
             impl SpudTypesExt for $t {
-                fn get_spud_type_tag(&self) -> SpudTypes {
-                    SpudTypes::$spud_type
-                }
-
                 fn write_spud_bytes(&self, data: &mut Vec<u8>) {
                     data.push(SpudTypes::$spud_type as u8);
 
@@ -61,6 +56,9 @@ impl_spud_type_ext! {
     Decimal, Decimal, write_decimal,
     bool, Bool, write_bool,
     (), Null, write_null,
+    Date, Date, write_date,
+    Time, Time, write_time,
+    DateTime, DateTime, write_datetime,
 }
 
 fn write_bool(value: bool, data: &mut Vec<u8>) {
@@ -81,11 +79,25 @@ fn write_decimal(value: Decimal, data: &mut Vec<u8>) {
     data.extend_from_slice(&value_data);
 }
 
-impl<T: SpudTypesExt> SpudTypesExt for Vec<T> {
-    fn get_spud_type_tag(&self) -> SpudTypes {
-        SpudTypes::ArrayStart
-    }
+fn write_date(value: Date, data: &mut Vec<u8>) {
+    data.push(SpudTypes::Date as u8);
 
+    data.extend_from_slice(&value.as_le_bytes());
+}
+
+fn write_time(value: Time, data: &mut Vec<u8>) {
+    data.push(SpudTypes::Time as u8);
+
+    data.extend_from_slice(&value.as_le_bytes());
+}
+
+fn write_datetime(value: DateTime, data: &mut Vec<u8>) {
+    data.push(SpudTypes::DateTime as u8);
+
+    data.extend_from_slice(&value.as_le_bytes());
+}
+
+impl<T: SpudTypesExt> SpudTypesExt for Vec<T> {
     fn write_spud_bytes(&self, data: &mut Vec<u8>) {
         data.push(SpudTypes::ArrayStart as u8);
 
@@ -98,10 +110,6 @@ impl<T: SpudTypesExt> SpudTypesExt for Vec<T> {
 }
 
 impl<T: SpudTypesExt> SpudTypesExt for &[T] {
-    fn get_spud_type_tag(&self) -> SpudTypes {
-        SpudTypes::ArrayStart
-    }
-
     fn write_spud_bytes(&self, data: &mut Vec<u8>) {
         data.push(SpudTypes::ArrayStart as u8);
 
@@ -114,10 +122,6 @@ impl<T: SpudTypesExt> SpudTypesExt for &[T] {
 }
 
 impl SpudTypesExt for SpudString {
-    fn get_spud_type_tag(&self) -> SpudTypes {
-        SpudTypes::String
-    }
-
     fn write_spud_bytes(&self, data: &mut Vec<u8>) {
         data.push(SpudTypes::String as u8);
 
@@ -128,10 +132,6 @@ impl SpudTypesExt for SpudString {
 }
 
 impl SpudTypesExt for BinaryBlobStruct<'_> {
-    fn get_spud_type_tag(&self) -> SpudTypes {
-        SpudTypes::BinaryBlob
-    }
-
     fn write_spud_bytes(&self, data: &mut Vec<u8>) {
         data.push(SpudTypes::BinaryBlob as u8);
 

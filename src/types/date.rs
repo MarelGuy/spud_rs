@@ -13,6 +13,16 @@ pub struct Date {
     day: u8,
 }
 
+impl Date {
+    pub(crate) fn as_le_bytes(self) -> Vec<u8> {
+        velcro::vec![
+            ..self.year.to_le_bytes(),
+            ..self.month.to_le_bytes(),
+            ..self.day.to_le_bytes()
+        ]
+    }
+}
+
 impl TryFrom<NaiveDate> for Date {
     type Error = Box<dyn Error>;
 

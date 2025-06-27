@@ -19,6 +19,17 @@ pub struct Time {
     nanosecond: u32,
 }
 
+impl Time {
+    pub(crate) fn as_le_bytes(self) -> Vec<u8> {
+        velcro::vec![
+            ..self.hour.to_le_bytes(),
+            ..self.minute.to_le_bytes(),
+            ..self.second.to_le_bytes(),
+            ..self.nanosecond.to_le_bytes()
+        ]
+    }
+}
+
 impl TryFrom<NaiveTime> for Time {
     type Error = Box<dyn Error>;
 
