@@ -1,36 +1,30 @@
-
 # SPUD (Structured Payload of Unintelligible Data)
 
-SPUD is a custom binary file format designed for efficient storage and transmission of structured data. It uses type tags and field name interning to achieve a compact representation. This implementation is written in Rust.
+SPUD is a custom binary file format for efficient storage and transmission of structured data. It uses type tags and field name interning for compactness. This implementation is written in Rust.
 
 ## Features
 
-* **Compact Binary Representation:** Uses binary encoding for data types.
-* **Basic Data Types:** Supports `null`, `boolean`, various integer (`i8`-`i64`, `u8`-`u64`) and float (`f32`, `f64`) types, strings, and raw binary blobs.
-* **Field Name Interning:** Assigns unique IDs to field names within a file to reduce redundancy and save space.
-* **Versioning:** Files start with a version identifier (set at compile time) to ensure compatibility.
-* **Simple Structure:** Consists of a version header, a field name map, the data payload, and an End-Of-File marker (`[0xDE, 0xAD, 0xBE, 0xEF]`).
-* **Serde Integration:** Seamless conversion between Rust structs and the SPUD format via `serde`.
+- **Compact Binary Representation:** Binary encoding for all supported data types.
+- **Supported Data Types:** `null`, `bool`, signed/unsigned integers (`i8`–`i64`, `u8`–`u64`), `f32`, `f64`, `String`, and raw binary blobs (`Vec<u8>`).
+- **Field Name Interning:** Field names are mapped to unique IDs to reduce redundancy.
+- **Versioning:** Files start with a version string for compatibility.
+- **Simple Structure:** Version header, field name map, data payload, and EOF marker (`[0xDE, 0xAD, 0xBE, 0xEF]`).
+- **Serde Integration:** Serialize/deserialize Rust structs via `serde`.
 
 ## File Structure
 
-A `.spud` file generally follows this structure:
+A `.spud` file consists of:
 
-1.  **Version String:** The version string (bytes).
-2.  **Field Name Map:**
-    * A sequence of `(length_byte, field_name_bytes, id_byte)`.
-    * Ends with the `FieldNameListEnd` marker (`0x01`).
-3.  **Data Payload:**
-    * A sequence of `(FieldNameId_marker, field_id_byte, type_tag_byte, value_bytes)`.
-    * String and BinaryBlob types include their length before the data.
-    * Arrays and Objects are delimited by `ArrayStart`, `ArrayEnd`, `ObjectStart`, and `ObjectEnd` type tags.
-4.  **EOF Marker:** The sequence `0xDE, 0xAD, 0xBE, 0xEF`.
+1. **Version String:** UTF-8 bytes.
+2. **Field Name Map:** Sequence of `(length, field_name_bytes, id)` entries, ending with `0x01`.
+3. **Data Payload:** Sequence of `(field_id, type_tag, value_bytes)` entries. Strings/blobs include length. Arrays/objects are delimited by start/end tags.
+4. **EOF Marker:** `0xDE, 0xAD, 0xBE, 0xEF`.
 
 ## Usage
 
-### Encoding (Creating a SPUD file)
+### Encoding (Writing a SPUD file)
 
-You can build SPUD files either manually or by serializing Rust structs with `serde`.
+You can build SPUD files manually or by serializing Rust structs with `serde`.
 
 #### Manual Usage
 
@@ -43,13 +37,11 @@ builder
     .add_value("name", "Example Object")
     .add_value("version", 1u8)
     .add_value("enabled", true)
-    .add_value("description")
+    .add_value("description", Option::<String>::None)
     .add_value("value", 123.45f64)
     .add_value("raw_data", &[0x01, 0x02, 0x03, 0x04]);
 
-builder.build_file("output_dir", "my_spud_data");
-
-println!("SPUD file created!");
+builder.build_file("output_dir", "my_spud_data").unwrap();
 ```
 
 #### Serde Usage
@@ -78,7 +70,7 @@ let data = MyData {
 };
 
 let mut builder = SpudBuilder::from_serde(&data);
-builder.build_file("output_dir", "my_spud_data");
+builder.build_file("output_dir", "my_spud_data").unwrap();
 ```
 
 ### Decoding (Reading a SPUD file)
@@ -90,11 +82,9 @@ You can decode SPUD files manually or deserialize them into Rust structs with `s
 ```rust
 use spud::spud_decoder::SpudDecoder;
 
-let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud");
-
-println!("Decoding SPUD file:");
-decoder.decode();
-println!("Decoding finished.");
+let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud").unwrap();
+let data = decoder.decode().unwrap();
+println!("{:?}", data);
 ```
 
 #### Serde Usage
@@ -103,7 +93,7 @@ println!("Decoding finished.");
 use spud::spud_decoder::SpudDecoder;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct MyData {
     name: String,
     version: u8,
@@ -113,23 +103,23 @@ struct MyData {
     raw_data: Vec<u8>,
 }
 
-let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud");
+let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud").unwrap();
 let data: MyData = decoder.deserialize().unwrap();
+println!("{:?}", data);
 ```
 
 ## Roadmap / TODO
 
-Here are some planned features and improvements:
+- [] `serde` integration for `SpudBuilder` and `SpudDecoder`
+- [ ] Support for nested arrays/objects
+- [ ] CLI tool for inspecting and converting `.spud` files
 
-* **[ ] `serde` Integration:** Implemented `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder`.
+## Known Issues
 
-
-## Known bugs
-
-There are some bugs that are yet to be fixed, most of them are minor and are not listed here.
+Some minor bugs may exist; please report any issues.
 
 ## Contributing
 
-Contributions are welcome! Please open an issue to discuss changes or submit a pull request.
+Contributions are welcome! Open an issue or submit a pull request.
 
-#### README.md partially generated by Gemini
+#### README.md partially generated by AI
