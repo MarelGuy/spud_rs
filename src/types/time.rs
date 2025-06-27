@@ -20,6 +20,36 @@ pub struct Time {
 }
 
 impl Time {
+    /// Creates a new `Time` instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the hour is not between 0 and 23, minute is not between 0 and 59,
+    pub fn new(hour: u8, minute: u8, second: u8, nanosecond: u32) -> Result<Self, Box<dyn Error>> {
+        if hour > 23 {
+            return Err("Hour must be between 0 and 23".into());
+        }
+
+        if minute > 59 {
+            return Err("Minute must be between 0 and 59".into());
+        }
+
+        if second > 59 {
+            return Err("Second must be between 0 and 59".into());
+        }
+
+        if nanosecond >= 1_000_000_000 {
+            return Err("Nanosecond must be less than 1 billion".into());
+        }
+
+        Ok(Time {
+            hour,
+            minute,
+            second,
+            nanosecond,
+        })
+    }
+
     pub(crate) fn as_le_bytes(self) -> Vec<u8> {
         velcro::vec![
             ..self.hour.to_le_bytes(),

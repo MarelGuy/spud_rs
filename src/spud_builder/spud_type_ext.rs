@@ -80,20 +80,14 @@ fn write_decimal(value: Decimal, data: &mut Vec<u8>) {
 }
 
 fn write_date(value: Date, data: &mut Vec<u8>) {
-    data.push(SpudTypes::Date as u8);
-
     data.extend_from_slice(&value.as_le_bytes());
 }
 
 fn write_time(value: Time, data: &mut Vec<u8>) {
-    data.push(SpudTypes::Time as u8);
-
     data.extend_from_slice(&value.as_le_bytes());
 }
 
 fn write_datetime(value: DateTime, data: &mut Vec<u8>) {
-    data.push(SpudTypes::DateTime as u8);
-
     data.extend_from_slice(&value.as_le_bytes());
 }
 

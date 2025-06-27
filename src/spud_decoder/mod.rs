@@ -17,7 +17,11 @@ use std::{
     io::Write,
 };
 
-use crate::{SPUD_VERSION, spud_types::SpudTypes};
+use crate::{
+    SPUD_VERSION,
+    spud_types::SpudTypes,
+    types::{Date, Time},
+};
 
 /// The `SpudDecoder` is responsible for decoding SPUD files into a JSON format.
 #[derive(Default, Debug, Clone)]
@@ -185,7 +189,13 @@ impl SpudDecoder {
     /// Will panic if the index is out of bounds
     fn next(&mut self, steps: usize) -> Result<(), Box<dyn Error>> {
         if self.index + steps >= self.current_object.len() {
-            return Err("Index out of bounds".into());
+            return Err(format!(
+                "Index out of bounds, current index: {}, object length: {}, tried to read: {}",
+                self.index,
+                self.current_object.len(),
+                self.index + steps
+            )
+            .into());
         }
 
         self.index += steps;
@@ -275,6 +285,32 @@ impl SpudDecoder {
             ))?,
             _ => unreachable!(),
         })
+    }
+
+    fn read_date(read_bytes: &[u8]) -> Result<Date, Box<dyn Error>> {
+        let year: u16 = u16::from_le_bytes(
+            read_bytes[0..2]
+                .try_into()
+                .map_err(|_| "Invalid Date bytes")?,
+        );
+
+        let month: u8 = read_bytes[2];
+        let day: u8 = read_bytes[3];
+
+        Date::new(year, month, day)
+    }
+
+    fn read_time(read_bytes: &[u8]) -> Result<Time, Box<dyn Error>> {
+        let hour: u8 = read_bytes[0];
+        let minute: u8 = read_bytes[1];
+        let second: u8 = read_bytes[2];
+        let nanosecond: u32 = u32::from_le_bytes(
+            read_bytes[3..7]
+                .try_into()
+                .map_err(|_| "Invalid Time bytes")?,
+        );
+
+        Time::new(hour, minute, second, nanosecond)
     }
 
     /// # Panics
@@ -432,6 +468,34 @@ impl SpudDecoder {
                     Value::String(String::from_utf8(
                         self.current_object[self.index..self.index + string_len].to_vec(),
                     )?)
+                }
+                Some(SpudTypes::Date) => {
+                    self.next(1)?;
+
+                    let read_bytes: Vec<u8> = self.read_bytes(4)?;
+
+                    let date: Date = Self::read_date(&read_bytes)?;
+
+                    Value::String(date.to_string())
+                }
+                Some(SpudTypes::Time) => {
+                    self.next(1)?;
+
+                    let read_bytes: Vec<u8> = self.read_bytes(7)?;
+
+                    let time: Time = Self::read_time(&read_bytes)?;
+
+                    Value::String(time.to_string())
+                }
+                Some(SpudTypes::DateTime) => {
+                    self.next(1)?;
+
+                    let read_bytes: Vec<u8> = self.read_bytes(11)?;
+
+                    let date: Date = Self::read_date(&read_bytes[0..4])?;
+                    let time: Time = Self::read_time(&read_bytes[4..])?;
+
+                    Value::String(format!("{date} {time}"))
                 }
                 Some(SpudTypes::BinaryBlob) => {
                     let blob_len: usize = self.read_variable_length_data()?;

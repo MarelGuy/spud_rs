@@ -14,6 +14,46 @@ pub struct Date {
 }
 
 impl Date {
+    /// Creates a new `Date` instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the month is not between 1 and 12, or if the day is not valid for the given month and year.
+    pub fn new(year: u16, month: u8, day: u8) -> Result<Self, Box<dyn Error>> {
+        // Il controllo sul mese rimane invariato
+        if !(1..=12).contains(&month) {
+            return Err("Il mese deve essere compreso tra 1 e 12".into());
+        }
+
+        // Determiniamo il numero massimo di giorni per il mese inserito
+        let max_days = match month {
+            // Mesi con 31 giorni
+            1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+            // Mesi con 30 giorni
+            4 | 6 | 9 | 11 => 30,
+            // Febbraio
+            2 => {
+                if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) {
+                    29
+                } else {
+                    28
+                }
+            }
+            // Questo caso è teoricamente irraggiungibile grazie al primo controllo
+            _ => unreachable!(),
+        };
+
+        // Ora controlliamo che il giorno sia valido per quel mese specifico
+        if !(1..=max_days).contains(&day) {
+            return Err(format!(
+                "Giorno non valido. Il mese {month} dell'anno {year} ha {max_days} giorni."
+            )
+            .into());
+        }
+
+        Ok(Date { year, month, day })
+    }
+
     pub(crate) fn as_le_bytes(self) -> Vec<u8> {
         velcro::vec![
             ..self.year.to_le_bytes(),

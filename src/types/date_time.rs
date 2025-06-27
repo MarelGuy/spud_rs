@@ -18,6 +18,12 @@ pub struct DateTime {
 }
 
 impl DateTime {
+    #[must_use]
+    /// Creates a new `DateTime` instance.
+    pub fn new(date: Date, time: Time) -> Self {
+        DateTime { date, time }
+    }
+
     pub(crate) fn as_le_bytes(self) -> Vec<u8> {
         velcro::vec![..self.date.as_le_bytes(), ..self.time.as_le_bytes()]
     }
