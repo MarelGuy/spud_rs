@@ -5,6 +5,13 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 use crate::types::{Date, Time};
 
+/// A struct representing a date and time in the format YYYY-MM-DD HH:MM:SS.NS.
+/// This struct can be created from chrono's `NaiveDateTime`, and can also be parsed from a string in the same format.
+///
+/// # Notes
+/// - The `NS` (nanoseconds) part is optional. If not provided, it defaults to `0` and won't be displayed when converting to string.
+/// - This struct does not handle time zones or daylight saving time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DateTime {
     date: Date,
     time: Time,

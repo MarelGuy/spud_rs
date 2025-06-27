@@ -6,8 +6,33 @@ pub struct BinaryBlob<'a>(pub(crate) &'a [u8]);
 
 impl<'a> BinaryBlob<'a> {
     #[must_use]
+    /// Creates a new `BinaryBlob` from a byte slice.
     pub fn new(value: &'a [u8]) -> Self {
         Self(value)
+    }
+
+    #[must_use]
+    /// Returns the underlying byte slice of the `BinaryBlob`.
+    pub fn bytes(&self) -> &'a [u8] {
+        self.0
+    }
+
+    #[must_use]
+    /// Returns the length of the `BinaryBlob`.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[must_use]
+    /// Checks if the `BinaryBlob` is empty.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[must_use]
+    /// Converts the `BinaryBlob` to a `Vec<u8>`.
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
     }
 }
 

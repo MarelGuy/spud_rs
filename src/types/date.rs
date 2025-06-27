@@ -3,6 +3,10 @@ use std::error::Error;
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
 
+/// A struct representing a date in the format YYYY-MM-DD.
+/// This struct can be created from chrono's `NaiveDate` or `NaiveDateTime`,
+/// and can also be parsed from a string in the same format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Date {
     year: u16,
     month: u8,
