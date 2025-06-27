@@ -121,11 +121,6 @@ let data: MyData = decoder.deserialize().unwrap();
 
 Here are some planned features and improvements:
 
-* **[ ] More Types:** 
-  * **[x] Decimals**
-  * **[ ] Timestamp**
-  * **[ ] DateTime (no timezone)**
-  * **[ ] Enums**
 * **[ ] `serde` Integration:** Implemented `serde::Serialize` for `SpudBuilder` and `serde::Deserialize` for `SpudDecoder`.
 
 
