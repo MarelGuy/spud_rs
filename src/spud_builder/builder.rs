@@ -7,7 +7,6 @@ use std::{fmt, path::Path, rc::Rc};
 use crate::{
     SpudError,
     functions::{check_path, initialise_header},
-    spud_types::SpudTypes,
     types::ObjectId,
 };
 
@@ -101,6 +100,7 @@ impl SpudBuilder {
             Rc::clone(&self.field_names),
             Rc::clone(&self.seen_ids),
             Rc::clone(&self.objects),
+            Rc::clone(&self.data),
         )
     }
 
@@ -124,13 +124,7 @@ impl SpudBuilder {
     /// Returns an error if any of the objects cannot be encoded, typically due to issues with the data format or internal state.
     pub fn encode(&self) -> Result<Vec<u8>, SpudError> {
         for object in self.objects.borrow().0.values() {
-            let data: Vec<u8> = object.borrow().encode()?;
-
-            self.data.borrow_mut().extend_from_slice(&velcro::vec![
-                ..data,
-                SpudTypes::ObjectEnd as u8,
-                SpudTypes::ObjectEnd as u8
-            ]);
+            object.borrow().encode()?;
         }
 
         Ok(self.data.borrow().clone())

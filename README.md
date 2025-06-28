@@ -29,25 +29,30 @@ You can build SPUD files manually or by serializing Rust structs with `serde`.
 #### Manual Usage
 
 ```rust
+```rust
 use spud::spud_builder::SpudBuilder;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut builder = SpudBuilder::new();
 
-    let object = builder.new_object()?;
+    builder.object(|obj| {
+        obj.field("name", "Example Object")?;
+        obj.field("version", 1u8)?;
+        obj.field("enabled", true)?;
+        obj.field("description", Option::<String>::None)?;
+        obj.field("value", 123.45f64)?;
+        obj.field("raw_data", vec![0x01, 0x02, 0x03, 0x04])?;
 
-    object
-        .add_value("version", 1u8)?
-        .add_value("enabled", true)?
-        .add_value("description", String::new().into())?
-        .add_value("value", 123.45f64)?
-        .add_value("raw_data", vec![0x01, 0x02, 0x03, 0x04]);
-    
-    builder.build_file("output_dir", "my_spud_data").unwrap();
+        Ok(())
+    })?;
+
+    builder.build_file("output_dir", "my_spud_data")?;
+
+    Ok(())
 }
 ```
 
-#### Serde Usage
+#### Serde Usage (TODO)
 
 ```rust
 use spud::spud_builder::SpudBuilder;
@@ -113,7 +118,7 @@ println!("{:?}", data);
 
 ## Roadmap / TODO
 
-- [] `serde` integration for `SpudBuilder` and `SpudDecoder`
+- [ ] `serde` integration for `SpudBuilder` and `SpudDecoder`
 - [ ] Support for nested arrays/objects
 - [ ] CLI tool for inspecting and converting `.spud` files
 

@@ -24,9 +24,8 @@ impl SpudObject {
         field_names: Rc<RefCell<IndexMap<(String, u8), u8>>>,
         seen_ids: Rc<RefCell<Vec<bool>>>,
         objects: Rc<RefCell<ObjectMap>>,
+        data: Rc<RefCell<Vec<u8>>>,
     ) -> Result<Rc<RefCell<SpudObject>>, SpudError> {
-        let data: Rc<RefCell<Vec<u8>>> = Rc::new(RefCell::new(Vec::new()));
-
         data.borrow_mut()
             .extend_from_slice(&[SpudTypes::ObjectStart as u8, SpudTypes::ObjectStart as u8]);
 
@@ -104,11 +103,12 @@ impl SpudObject {
             Rc::clone(&self.field_names),
             Rc::clone(&self.seen_ids),
             Rc::clone(&self.objects),
+            Rc::clone(&self.data),
         )
     }
 
-    pub(crate) fn encode(&self) -> Result<Vec<u8>, SpudError> {
-        let mut data: Vec<u8> = self.data.borrow().clone();
+    pub(crate) fn encode(&self) -> Result<(), SpudError> {
+        let mut data = self.data.borrow_mut();
 
         data.push(SpudTypes::ObjectEnd as u8);
         data.push(SpudTypes::ObjectEnd as u8);
@@ -117,12 +117,10 @@ impl SpudObject {
         let objects: Values<'_, ObjectId, Rc<RefCell<SpudObject>>> = objects.0.values();
 
         for object in objects {
-            let encoded_object_data: Vec<u8> = object.borrow().encode()?;
-
-            data.extend_from_slice(&encoded_object_data);
+            object.borrow().encode()?;
         }
 
-        Ok(data)
+        Ok(())
     }
 
     fn add_field_name(&self, field_name: &str) -> Result<&Self, SpudError> {
