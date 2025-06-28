@@ -27,7 +27,11 @@ impl DateTime {
     }
 
     pub(crate) fn as_le_bytes(self) -> Vec<u8> {
-        velcro::vec![..self.date.as_le_bytes(), ..self.time.as_le_bytes()]
+        let mut bytes: Vec<u8> = self.date.as_le_bytes();
+
+        bytes.extend_from_slice(&self.time.as_le_bytes());
+
+        bytes
     }
 }
 

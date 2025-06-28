@@ -57,11 +57,13 @@ impl Date {
     }
 
     pub(crate) fn as_le_bytes(self) -> Vec<u8> {
-        velcro::vec![
-            ..self.year.to_le_bytes(),
-            ..self.month.to_le_bytes(),
-            ..self.day.to_le_bytes()
-        ]
+        let mut bytes: Vec<u8> = Vec::with_capacity(4);
+
+        bytes.extend_from_slice(&self.year.to_le_bytes());
+        bytes.push(self.month);
+        bytes.push(self.day);
+
+        bytes
     }
 }
 

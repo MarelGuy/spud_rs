@@ -59,12 +59,14 @@ impl Time {
     }
 
     pub(crate) fn as_le_bytes(self) -> Vec<u8> {
-        velcro::vec![
-            ..self.hour.to_le_bytes(),
-            ..self.minute.to_le_bytes(),
-            ..self.second.to_le_bytes(),
-            ..self.nanosecond.to_le_bytes()
-        ]
+        let mut bytes: Vec<u8> = Vec::with_capacity(1 + 1 + 1 + 4);
+
+        bytes.extend_from_slice(&self.hour.to_le_bytes());
+        bytes.extend_from_slice(&self.minute.to_le_bytes());
+        bytes.extend_from_slice(&self.second.to_le_bytes());
+        bytes.extend_from_slice(&self.nanosecond.to_le_bytes());
+
+        bytes
     }
 }
 
