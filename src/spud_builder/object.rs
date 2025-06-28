@@ -2,7 +2,10 @@
 
 use core::cell::RefCell;
 use indexmap::{IndexMap, map::Values};
-use std::{cell::Ref, rc::Rc};
+use std::{
+    cell::{Ref, RefMut},
+    rc::Rc,
+};
 
 use crate::{SpudError, functions::generate_u8_id, spud_types::SpudTypes, types::ObjectId};
 
@@ -89,12 +92,16 @@ impl SpudObject {
     /// # Errors
     ///
     /// Returns an error if the object cannot be created, typically due to internal issues with the builder's state.
-    pub fn object<F>(&self, f: F) -> Result<(), SpudError>
+    pub fn object<F>(&self, field_name: &str, f: F) -> Result<(), SpudError>
     where
         F: FnOnce(&SpudObject) -> Result<(), SpudError>,
     {
-        let obj = self.new_object()?;
+        self.add_field_name(field_name)?;
+
+        let obj: Rc<RefCell<SpudObject>> = self.new_object()?;
+
         f(&obj.borrow())?;
+
         Ok(())
     }
 
@@ -108,13 +115,15 @@ impl SpudObject {
     }
 
     pub(crate) fn encode(&self) -> Result<(), SpudError> {
-        let mut data = self.data.borrow_mut();
+        let mut data: RefMut<'_, Vec<u8>> = self.data.borrow_mut();
 
         data.push(SpudTypes::ObjectEnd as u8);
         data.push(SpudTypes::ObjectEnd as u8);
 
         let objects: Ref<'_, ObjectMap> = self.objects.borrow();
         let objects: Values<'_, ObjectId, Rc<RefCell<SpudObject>>> = objects.0.values();
+
+        drop(data);
 
         for object in objects {
             object.borrow().encode()?;

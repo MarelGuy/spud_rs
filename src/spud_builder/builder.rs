@@ -90,8 +90,10 @@ impl SpudBuilder {
     where
         F: FnOnce(&SpudObject) -> Result<(), SpudError>,
     {
-        let obj = self.new_object()?;
+        let obj: Rc<RefCell<SpudObject>> = self.new_object()?;
+
         f(&obj.borrow())?;
+
         Ok(())
     }
 
@@ -139,7 +141,7 @@ impl fmt::Debug for SpudBuilder {
         debug_builder.field("data", &self.data.borrow());
         debug_builder.field("objects", &self.objects.borrow());
 
-        let mut seen_ids_to_display = IndexMap::new();
+        let mut seen_ids_to_display: IndexMap<usize, bool> = IndexMap::new();
 
         for (index, &is_seen) in self.seen_ids.borrow().iter().enumerate() {
             if is_seen {

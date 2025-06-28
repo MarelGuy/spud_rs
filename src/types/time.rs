@@ -112,7 +112,7 @@ impl FromStr for Time {
         let hour: u8 = u8::from_str(parts[0]).map_err(|_| fmt::Error)?;
         let minute: u8 = u8::from_str(parts[1]).map_err(|_| fmt::Error)?;
         let second: u8 = u8::from_str(parts[2]).map_err(|_| fmt::Error)?;
-        let nanosecond = if parts.len() == 4 {
+        let nanosecond: u32 = if parts.len() == 4 {
             u32::from_str(parts[3]).map_err(|_| fmt::Error)?
         } else {
             0

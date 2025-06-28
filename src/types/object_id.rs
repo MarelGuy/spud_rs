@@ -88,7 +88,7 @@ impl TryFrom<&str> for ObjectId {
     type Error = SpudError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
-        let decoded = bs58::decode(s)
+        let decoded: Vec<u8> = bs58::decode(s)
             .into_vec()
             .map_err(|e| SpudError::ValidationError(format!("Failed to decode base58: {e}")))?;
 
@@ -104,7 +104,7 @@ impl TryFrom<String> for ObjectId {
     type Error = SpudError;
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        let decoded = bs58::decode(s)
+        let decoded: Vec<u8> = bs58::decode(s)
             .into_vec()
             .map_err(|e| SpudError::ValidationError(format!("Failed to decode base58: {e}")))?;
 
@@ -124,7 +124,7 @@ impl TryFrom<SpudString> for ObjectId {
     type Error = SpudError;
 
     fn try_from(value: SpudString) -> Result<Self, Self::Error> {
-        let decoded = bs58::decode(value.as_bytes())
+        let decoded: Vec<u8> = bs58::decode(value.as_bytes())
             .into_vec()
             .map_err(|e| SpudError::ValidationError(format!("Failed to decode base58: {e}")))?;
 

@@ -133,6 +133,7 @@ impl SpudDecoder {
             self.current_field.clear();
 
             let decoded_object: IndexMap<String, Value> = self.decode_object()?;
+
             self.output.push(decoded_object);
         }
 

@@ -29,7 +29,7 @@ impl Date {
         }
 
         // Determiniamo il numero massimo di giorni per il mese inserito
-        let max_days = match month {
+        let max_days: u8 = match month {
             // Mesi con 31 giorni
             1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
             // Mesi con 30 giorni
