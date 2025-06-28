@@ -1,4 +1,4 @@
-pub const SPUD_VERSION: &str = "SPUD-0.3.0";
+pub const SPUD_VERSION: &str = "SPUD-0.5.0";
 
 pub mod types;
 

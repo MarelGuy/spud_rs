@@ -118,9 +118,10 @@ println!("{:?}", data);
 
 ## Roadmap / TODO
 
-- [ ] `serde` integration for `SpudBuilder` and `SpudDecoder`
-- [ ] Support for nested arrays/objects
-- [ ] CLI tool for inspecting and converting `.spud` files
+- `serde` integration for `SpudBuilder` and `SpudDecoder`
+- Support for nested objects
+- CLI tool for inspecting and converting `.spud` files
+- spud!{} macro
 
 ## Known Issues
 
