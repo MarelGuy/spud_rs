@@ -31,17 +31,20 @@ You can build SPUD files manually or by serializing Rust structs with `serde`.
 ```rust
 use spud::spud_builder::SpudBuilder;
 
-let mut builder = SpudBuilder::new();
+fn main() {
+    let mut builder = SpudBuilder::new();
 
-builder
-    .add_value("name", "Example Object")
-    .add_value("version", 1u8)
-    .add_value("enabled", true)
-    .add_value("description", Option::<String>::None)
-    .add_value("value", 123.45f64)
-    .add_value("raw_data", &[0x01, 0x02, 0x03, 0x04]);
+    let object = builder.new_object()?;
 
-builder.build_file("output_dir", "my_spud_data").unwrap();
+    object
+        .add_value("version", 1u8)?
+        .add_value("enabled", true)?
+        .add_value("description", String::new().into())?
+        .add_value("value", 123.45f64)?
+        .add_value("raw_data", vec![0x01, 0x02, 0x03, 0x04]);
+    
+    builder.build_file("output_dir", "my_spud_data").unwrap();
+}
 ```
 
 #### Serde Usage
