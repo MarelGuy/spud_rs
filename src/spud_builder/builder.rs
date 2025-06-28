@@ -20,7 +20,7 @@ use std::fs;
 use super::SpudObject;
 
 #[derive(Default, Clone)]
-pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Rc<RefCell<Vec<u8>>>>);
+pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Rc<RefCell<SpudObject>>>);
 
 /// Represents a builder for creating SPUD objects.
 ///
@@ -71,7 +71,10 @@ impl SpudBuilder {
     /// use spud::SpudBuilder;
     ///
     /// let builder = SpudBuilder::new();
-    /// let object = builder.new_object();
+    ///
+    /// builder.object(|obj| {
+    ///     OK(())
+    /// });
     /// ```
     ///
     /// # Returns
@@ -84,7 +87,16 @@ impl SpudBuilder {
     /// # Note
     /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder, allowing for consistent data management.
     /// Nothing is cloned, SPUD uses `Rc` and `RefCell` to manage shared ownership and mutability.
-    pub fn new_object(&self) -> Result<SpudObject, SpudError> {
+    pub fn object<F>(&self, f: F) -> Result<(), SpudError>
+    where
+        F: FnOnce(&SpudObject) -> Result<(), SpudError>,
+    {
+        let obj = self.new_object()?;
+        f(&obj.borrow())?;
+        Ok(())
+    }
+
+    fn new_object(&self) -> Result<Rc<RefCell<SpudObject>>, SpudError> {
         SpudObject::new(
             Rc::clone(&self.field_names),
             Rc::clone(&self.seen_ids),
@@ -93,25 +105,35 @@ impl SpudBuilder {
     }
 
     /// Encodes all objects associated with this builder into a byte vector.
+    ///
     /// # Examples
     /// ```rust
     /// use spud::SpudBuilder;
     ///
-    /// let mut builder = SpudBuilder::new();
-    /// let object = builder.new_object();
+    /// let builder = SpudBuilder::new();
+    ///
+    /// builder.object(|obj| {
+    ///     OK(())
+    /// });
     ///
     /// let encoded_data = builder.encode();
     /// ```
-    pub fn encode(&mut self) -> Vec<u8> {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any of the objects cannot be encoded, typically due to issues with the data format or internal state.
+    pub fn encode(&self) -> Result<Vec<u8>, SpudError> {
         for object in self.objects.borrow().0.values() {
-            self.data.borrow_mut().extend_from_slice(&object.borrow());
+            let data: Vec<u8> = object.borrow().encode()?;
 
-            self.data
-                .borrow_mut()
-                .extend_from_slice(&[SpudTypes::ObjectEnd as u8, SpudTypes::ObjectEnd as u8]);
+            self.data.borrow_mut().extend_from_slice(&velcro::vec![
+                ..data,
+                SpudTypes::ObjectEnd as u8,
+                SpudTypes::ObjectEnd as u8
+            ]);
         }
 
-        self.data.borrow().clone()
+        Ok(self.data.borrow().clone())
     }
 }
 

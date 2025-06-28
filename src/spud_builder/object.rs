@@ -1,8 +1,8 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use core::cell::RefCell;
-use indexmap::IndexMap;
-use std::rc::Rc;
+use indexmap::{IndexMap, map::Values};
+use std::{cell::Ref, rc::Rc};
 
 use crate::{SpudError, functions::generate_u8_id, spud_types::SpudTypes, types::ObjectId};
 
@@ -16,6 +16,7 @@ pub struct SpudObject {
     data: Rc<RefCell<Vec<u8>>>,
     field_names: Rc<RefCell<IndexMap<(String, u8), u8>>>,
     seen_ids: Rc<RefCell<Vec<bool>>>,
+    objects: Rc<RefCell<ObjectMap>>,
 }
 
 impl SpudObject {
@@ -23,7 +24,7 @@ impl SpudObject {
         field_names: Rc<RefCell<IndexMap<(String, u8), u8>>>,
         seen_ids: Rc<RefCell<Vec<bool>>>,
         objects: Rc<RefCell<ObjectMap>>,
-    ) -> Result<Self, SpudError> {
+    ) -> Result<Rc<RefCell<SpudObject>>, SpudError> {
         let data: Rc<RefCell<Vec<u8>>> = Rc::new(RefCell::new(Vec::new()));
 
         data.borrow_mut()
@@ -31,14 +32,17 @@ impl SpudObject {
 
         let oid: ObjectId = Self::generate_oid(&mut data.borrow_mut())?;
 
-        objects.borrow_mut().0.insert(oid, Rc::clone(&data));
-
-        Ok(Self {
+        let object: Rc<RefCell<SpudObject>> = Rc::new(RefCell::new(Self {
             _oid: oid,
             data,
             field_names,
             seen_ids,
-        })
+            objects: Rc::new(RefCell::new(ObjectMap(IndexMap::new()))),
+        }));
+
+        objects.borrow_mut().0.insert(oid, Rc::clone(&object));
+
+        Ok(object)
     }
 
     /// Adds a value to the object with the specified field name.
@@ -52,10 +56,14 @@ impl SpudObject {
     /// ```rust
     /// use spud::{SpudBuilder, SpudObject, types::SpudString};
     ///
-    /// let mut builder = SpudBuilder::new();
-    /// let mut object = builder.new_object();
+    /// let builder = SpudBuilder::new();
     ///
-    /// object.add_value("example_field", SpudString::from("example_value"));
+    /// builder.object(|obj| {
+    ///     obj.add_value("example_field", SpudString::from("example_value"));
+    ///
+    ///     OK(())
+    /// });
+    ///
     /// // The object now contains the field "example_field" with the value "example_value".
     /// ```
     ///
@@ -66,10 +74,10 @@ impl SpudObject {
     ///
     /// If the field name is too long (greater than 255 characters) or if there is an error generating a unique ID, this method will return an error.
     pub fn add_value<T: SpudTypesExt>(
-        &mut self,
+        &self,
         field_name: &str,
         value: T,
-    ) -> Result<&mut Self, SpudError> {
+    ) -> Result<&Self, SpudError> {
         self.add_field_name(field_name)?;
 
         value.write_spud_bytes(&mut self.data.borrow_mut());
@@ -77,7 +85,47 @@ impl SpudObject {
         Ok(self)
     }
 
-    fn add_field_name(&mut self, field_name: &str) -> Result<&mut Self, SpudError> {
+    /// Creates a new `SpudObject` instance associated with this Object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the object cannot be created, typically due to internal issues with the builder's state.
+    pub fn object<F>(&self, f: F) -> Result<(), SpudError>
+    where
+        F: FnOnce(&SpudObject) -> Result<(), SpudError>,
+    {
+        let obj = self.new_object()?;
+        f(&obj.borrow())?;
+        Ok(())
+    }
+
+    fn new_object(&self) -> Result<Rc<RefCell<SpudObject>>, SpudError> {
+        SpudObject::new(
+            Rc::clone(&self.field_names),
+            Rc::clone(&self.seen_ids),
+            Rc::clone(&self.objects),
+        )
+    }
+
+    pub(crate) fn encode(&self) -> Result<Vec<u8>, SpudError> {
+        let mut data: Vec<u8> = self.data.borrow().clone();
+
+        data.push(SpudTypes::ObjectEnd as u8);
+        data.push(SpudTypes::ObjectEnd as u8);
+
+        let objects: Ref<'_, ObjectMap> = self.objects.borrow();
+        let objects: Values<'_, ObjectId, Rc<RefCell<SpudObject>>> = objects.0.values();
+
+        for object in objects {
+            let encoded_object_data: Vec<u8> = object.borrow().encode()?;
+
+            data.extend_from_slice(&encoded_object_data);
+        }
+
+        Ok(data)
+    }
+
+    fn add_field_name(&self, field_name: &str) -> Result<&Self, SpudError> {
         let key: (String, u8) = (field_name.into(), u8::try_from(field_name.len())?);
 
         let id: u8 = if let Some(value) = self.field_names.borrow().get(&key) {
