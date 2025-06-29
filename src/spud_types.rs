@@ -14,16 +14,16 @@ pub enum SpudTypes {
     U64 = 0x0C,
     F32 = 0x0D,
     F64 = 0x0E,
-    Decimal = 0x16,
+    Decimal = 0x15,
 
     // Variable-Length Types
     String = 0x0F,
     BinaryBlob = 0x14,
 
     // Date and Time Types
-    Date = 0x17,
-    Time = 0x18,
-    DateTime = 0x19,
+    Date = 0x16,
+    Time = 0x17,
+    DateTime = 0x18,
 
     // Composite Type Delimiters
     ArrayStart = 0x10,
@@ -32,7 +32,6 @@ pub enum SpudTypes {
     ObjectEnd = 0x13,
 
     // Identifiers and Metadata
-    ObjectId = 0x15,
     FieldNameId = 0x02,
     FieldNameListEnd = 0x01,
 }
@@ -61,11 +60,10 @@ impl SpudTypes {
             0x12 => Some(SpudTypes::ObjectStart),
             0x13 => Some(SpudTypes::ObjectEnd),
             0x14 => Some(SpudTypes::BinaryBlob),
-            0x15 => Some(SpudTypes::ObjectId),
-            0x16 => Some(SpudTypes::Decimal),
-            0x17 => Some(SpudTypes::Date),
-            0x18 => Some(SpudTypes::Time),
-            0x19 => Some(SpudTypes::DateTime),
+            0x15 => Some(SpudTypes::Decimal),
+            0x16 => Some(SpudTypes::Date),
+            0x17 => Some(SpudTypes::Time),
+            0x18 => Some(SpudTypes::DateTime),
             _ => None,
         }
     }

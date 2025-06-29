@@ -118,10 +118,11 @@ println!("{:?}", data);
 
 ## Roadmap / TODO
 
-- `serde` integration for `SpudBuilder` and `SpudDecoder`
+- Parallelism
 - Support for nested objects
-- CLI tool for inspecting and converting `.spud` files
+- `serde` integration for `SpudBuilder` and `SpudDecoder`
 - spud!{} macro
+- CLI tool for inspecting and converting `.spud` files
 
 ## Known Issues
 

@@ -153,7 +153,6 @@ impl SpudObject {
     fn generate_oid(data: &mut Vec<u8>) -> Result<ObjectId, SpudError> {
         let oid: ObjectId = ObjectId::new()?;
 
-        data.push(SpudTypes::ObjectId as u8);
         data.extend_from_slice(oid.as_bytes());
 
         Ok(oid)
