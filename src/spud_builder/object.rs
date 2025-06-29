@@ -1,11 +1,7 @@
 #![allow(clippy::needless_pass_by_value)]
 
-use core::cell::RefCell;
 use indexmap::{IndexMap, map::Values};
-use std::{
-    cell::{Ref, RefMut},
-    rc::Rc,
-};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::{SpudError, functions::generate_u8_id, spud_types::SpudTypes, types::ObjectId};
 
@@ -16,33 +12,34 @@ use super::{SpudTypesExt, builder::ObjectMap};
 #[derive(Debug)]
 pub struct SpudObject {
     pub(crate) _oid: ObjectId,
-    data: Rc<RefCell<Vec<u8>>>,
-    field_names: Rc<RefCell<IndexMap<(String, u8), u8>>>,
-    seen_ids: Rc<RefCell<Vec<bool>>>,
-    objects: Rc<RefCell<ObjectMap>>,
+    data: Arc<Mutex<Vec<u8>>>,
+    field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
+    seen_ids: Arc<Mutex<Vec<bool>>>,
+    objects: Arc<Mutex<ObjectMap>>,
 }
 
 impl SpudObject {
     pub(crate) fn new(
-        field_names: Rc<RefCell<IndexMap<(String, u8), u8>>>,
-        seen_ids: Rc<RefCell<Vec<bool>>>,
-        objects: Rc<RefCell<ObjectMap>>,
-        data: Rc<RefCell<Vec<u8>>>,
-    ) -> Result<Rc<RefCell<SpudObject>>, SpudError> {
-        data.borrow_mut()
+        field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
+        seen_ids: Arc<Mutex<Vec<bool>>>,
+        objects: Arc<Mutex<ObjectMap>>,
+        data: Arc<Mutex<Vec<u8>>>,
+    ) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
+        data.lock()
+            .unwrap()
             .extend_from_slice(&[SpudTypes::ObjectStart as u8, SpudTypes::ObjectStart as u8]);
 
-        let oid: ObjectId = Self::generate_oid(&mut data.borrow_mut())?;
+        let oid: ObjectId = Self::generate_oid(&mut data.lock().unwrap())?;
 
-        let object: Rc<RefCell<SpudObject>> = Rc::new(RefCell::new(Self {
+        let object: Arc<Mutex<SpudObject>> = Arc::new(Mutex::new(Self {
             _oid: oid,
             data,
             field_names,
             seen_ids,
-            objects: Rc::new(RefCell::new(ObjectMap(IndexMap::new()))),
+            objects: Arc::new(Mutex::new(ObjectMap(IndexMap::new()))),
         }));
 
-        objects.borrow_mut().0.insert(oid, Rc::clone(&object));
+        objects.lock().unwrap().0.insert(oid, Arc::clone(&object));
 
         Ok(object)
     }
@@ -75,6 +72,10 @@ impl SpudObject {
     /// # Errors
     ///
     /// If the field name is too long (greater than 255 characters) or if there is an error generating a unique ID, this method will return an error.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
     pub fn add_value<T: SpudTypesExt>(
         &self,
         field_name: &str,
@@ -82,7 +83,7 @@ impl SpudObject {
     ) -> Result<&Self, SpudError> {
         self.add_field_name(field_name)?;
 
-        value.write_spud_bytes(&mut self.data.borrow_mut());
+        value.write_spud_bytes(&mut self.data.lock().unwrap());
 
         Ok(self)
     }
@@ -92,41 +93,45 @@ impl SpudObject {
     /// # Errors
     ///
     /// Returns an error if the object cannot be created, typically due to internal issues with the builder's state.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
     pub fn object<F>(&self, field_name: &str, f: F) -> Result<(), SpudError>
     where
         F: FnOnce(&SpudObject) -> Result<(), SpudError>,
     {
         self.add_field_name(field_name)?;
 
-        let obj: Rc<RefCell<SpudObject>> = self.new_object()?;
+        let obj: Arc<Mutex<SpudObject>> = self.new_object()?;
 
-        f(&obj.borrow())?;
+        f(&obj.lock().unwrap())?;
 
         Ok(())
     }
 
-    fn new_object(&self) -> Result<Rc<RefCell<SpudObject>>, SpudError> {
+    fn new_object(&self) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
         SpudObject::new(
-            Rc::clone(&self.field_names),
-            Rc::clone(&self.seen_ids),
-            Rc::clone(&self.objects),
-            Rc::clone(&self.data),
+            Arc::clone(&self.field_names),
+            Arc::clone(&self.seen_ids),
+            Arc::clone(&self.objects),
+            Arc::clone(&self.data),
         )
     }
 
     pub(crate) fn encode(&self) -> Result<(), SpudError> {
-        let mut data: RefMut<'_, Vec<u8>> = self.data.borrow_mut();
+        let mut data: MutexGuard<'_, Vec<u8>> = self.data.lock().unwrap();
 
         data.push(SpudTypes::ObjectEnd as u8);
         data.push(SpudTypes::ObjectEnd as u8);
 
-        let objects: Ref<'_, ObjectMap> = self.objects.borrow();
-        let objects: Values<'_, ObjectId, Rc<RefCell<SpudObject>>> = objects.0.values();
+        let objects: MutexGuard<'_, ObjectMap> = self.objects.lock().unwrap();
+        let objects: Values<'_, ObjectId, Arc<Mutex<SpudObject>>> = objects.0.values();
 
         drop(data);
 
         for object in objects {
-            object.borrow().encode()?;
+            object.lock().unwrap().encode()?;
         }
 
         Ok(())
@@ -135,17 +140,17 @@ impl SpudObject {
     fn add_field_name(&self, field_name: &str) -> Result<&Self, SpudError> {
         let key: (String, u8) = (field_name.into(), u8::try_from(field_name.len())?);
 
-        let id: u8 = if let Some(value) = self.field_names.borrow().get(&key) {
+        let id: u8 = if let Some(value) = self.field_names.lock().unwrap().get(&key) {
             *value
         } else {
-            let id: u8 = generate_u8_id(&mut self.seen_ids.borrow_mut())?;
+            let id: u8 = generate_u8_id(&mut self.seen_ids.lock().unwrap())?;
 
-            self.field_names.borrow_mut().insert(key, id);
+            self.field_names.lock().unwrap().insert(key, id);
             id
         };
 
-        self.data.borrow_mut().push(SpudTypes::FieldNameId as u8);
-        self.data.borrow_mut().push(id);
+        self.data.lock().unwrap().push(SpudTypes::FieldNameId as u8);
+        self.data.lock().unwrap().push(id);
 
         Ok(self)
     }

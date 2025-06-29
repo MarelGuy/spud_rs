@@ -1,8 +1,9 @@
 #![allow(clippy::needless_pass_by_value)]
 
-use core::cell::RefCell;
 use indexmap::IndexMap;
-use std::{fmt, path::Path, rc::Rc};
+use std::{fmt, path::Path, sync::Arc};
+
+use std::sync::Mutex;
 
 use crate::{
     SpudError,
@@ -19,7 +20,7 @@ use std::fs;
 use super::SpudObject;
 
 #[derive(Default, Clone)]
-pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Rc<RefCell<SpudObject>>>);
+pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>>);
 
 /// Represents a builder for creating SPUD objects.
 ///
@@ -31,10 +32,10 @@ pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Rc<RefCell<SpudObject>
 /// ```
 #[derive(Default, Clone)]
 pub struct SpudBuilder {
-    pub(crate) field_names: Rc<RefCell<IndexMap<(String, u8), u8>>>,
-    pub(crate) data: Rc<RefCell<Vec<u8>>>,
-    pub(crate) objects: Rc<RefCell<ObjectMap>>,
-    pub(crate) seen_ids: Rc<RefCell<Vec<bool>>>,
+    pub(crate) field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
+    pub(crate) data: Arc<Mutex<Vec<u8>>>,
+    pub(crate) objects: Arc<Mutex<ObjectMap>>,
+    pub(crate) seen_ids: Arc<Mutex<Vec<bool>>>,
 }
 
 impl SpudBuilder {
@@ -56,10 +57,10 @@ impl SpudBuilder {
         seen_ids[1] = true;
 
         Self {
-            data: Rc::new(RefCell::new(Vec::new())),
-            field_names: Rc::new(RefCell::new(IndexMap::new())),
-            objects: Rc::new(RefCell::new(ObjectMap(IndexMap::new()))),
-            seen_ids: Rc::new(RefCell::new(seen_ids)),
+            field_names: Arc::new(Mutex::new(IndexMap::new())),
+            data: Arc::new(Mutex::new(Vec::new())),
+            objects: Arc::new(Mutex::new(ObjectMap(IndexMap::new()))),
+            seen_ids: Arc::new(Mutex::new(seen_ids)),
         }
     }
 
@@ -83,6 +84,10 @@ impl SpudBuilder {
     ///
     /// Returns an error if the object cannot be created, typically due to internal issues with the builder's state.
     ///
+    /// # Panics
+    ///
+    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
+    ///
     /// # Note
     /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder, allowing for consistent data management.
     /// Nothing is cloned, SPUD uses `Rc` and `RefCell` to manage shared ownership and mutability.
@@ -90,19 +95,19 @@ impl SpudBuilder {
     where
         F: FnOnce(&SpudObject) -> Result<(), SpudError>,
     {
-        let obj: Rc<RefCell<SpudObject>> = self.new_object()?;
+        let obj: Arc<Mutex<SpudObject>> = self.new_object()?;
 
-        f(&obj.borrow())?;
+        f(&obj.lock().unwrap())?;
 
         Ok(())
     }
 
-    fn new_object(&self) -> Result<Rc<RefCell<SpudObject>>, SpudError> {
+    fn new_object(&self) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
         SpudObject::new(
-            Rc::clone(&self.field_names),
-            Rc::clone(&self.seen_ids),
-            Rc::clone(&self.objects),
-            Rc::clone(&self.data),
+            Arc::clone(&self.field_names),
+            Arc::clone(&self.seen_ids),
+            Arc::clone(&self.objects),
+            Arc::clone(&self.data),
         )
     }
 
@@ -124,12 +129,16 @@ impl SpudBuilder {
     /// # Errors
     ///
     /// Returns an error if any of the objects cannot be encoded, typically due to issues with the data format or internal state.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
     pub fn encode(&self) -> Result<Vec<u8>, SpudError> {
-        for object in self.objects.borrow().0.values() {
-            object.borrow().encode()?;
+        for object in self.objects.lock().unwrap().0.values() {
+            object.lock().unwrap().encode()?;
         }
 
-        Ok(self.data.borrow().clone())
+        Ok(self.data.lock().unwrap().clone())
     }
 }
 
@@ -137,13 +146,13 @@ impl fmt::Debug for SpudBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut debug_builder: fmt::DebugStruct<'_, '_> = f.debug_struct("SpudBuilder");
 
-        debug_builder.field("field_names", &self.field_names.borrow());
-        debug_builder.field("data", &self.data.borrow());
-        debug_builder.field("objects", &self.objects.borrow());
+        debug_builder.field("field_names", &self.field_names.lock().unwrap());
+        debug_builder.field("data", &self.data.lock().unwrap());
+        debug_builder.field("objects", &self.objects.lock().unwrap());
 
         let mut seen_ids_to_display: IndexMap<usize, bool> = IndexMap::new();
 
-        for (index, &is_seen) in self.seen_ids.borrow().iter().enumerate() {
+        for (index, &is_seen) in self.seen_ids.lock().unwrap().iter().enumerate() {
             if is_seen {
                 seen_ids_to_display.insert(index, true);
             }
@@ -159,7 +168,7 @@ impl fmt::Debug for ObjectMap {
         let mut debug_map: fmt::DebugMap<'_, '_> = f.debug_map();
 
         for (key, value) in &self.0 {
-            debug_map.entry(&key, &value.borrow());
+            debug_map.entry(&key, &value.lock().unwrap());
         }
 
         debug_map.finish()
@@ -177,12 +186,19 @@ impl SpudBuilder {
     /// # Errors
     ///
     /// Returns an error if the path is invalid
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
     pub async fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), SpudError> {
         let path_str: String = check_path(path_str, file_name)?;
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow());
+        let header: Vec<u8> = initialise_header(
+            &self.field_names.lock().unwrap(),
+            &self.data.lock().unwrap(),
+        );
 
         write(path, header).await?;
 
