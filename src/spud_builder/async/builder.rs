@@ -27,7 +27,7 @@ pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>
 ///
 /// # Example
 /// ```rust
-/// use spud::SpudBuilder;
+/// use spud_rs::SpudBuilder;
 /// ```
 pub struct SpudBuilder {
     pub(crate) field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
@@ -40,14 +40,9 @@ impl SpudBuilder {
     #[must_use]
     /// Creates a new `SpudBuilder` instance.
     ///
-    /// # Arguments
-    ///
-    /// * `rt` - A Tokio runtime instance that will be used for asynchronous operations.
-    ///
     /// # Examples
-    ///
     /// ```rust
-    /// use spud::SpudBuilder;
+    /// use spud_rs::SpudBuilder;
     ///
     /// let rt = tokio::runtime::Runtime::new().unwrap();
     /// let builder = SpudBuilder::new(rt);
@@ -80,7 +75,7 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud::SpudBuilder;
+    /// use spud_rs::SpudBuilder;
     ///
     /// let rt = tokio::runtime::Runtime::new().unwrap();
     ///
@@ -89,7 +84,7 @@ impl SpudBuilder {
     /// builder.object(|obj| {
     ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
     ///
-    ///     OK(())
+    ///     Ok(())
     /// });
     /// ```
     ///
@@ -131,7 +126,7 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud::SpudBuilder;
+    /// use spud_rs::SpudBuilder;
     ///
     ///
     /// let rt = tokio::runtime::Runtime::new().unwrap();
@@ -143,7 +138,7 @@ impl SpudBuilder {
     ///
     ///     locked_obj.add_value("field_name", 42u8).await?;
     ///
-    ///     OK(())
+    ///     Ok(())
     /// });
     ///
     /// let encoded_data = builder.encode().await.unwrap();
@@ -175,7 +170,7 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud::SpudBuilder;
+    /// use spud_rs::SpudBuilder;
     ///
     /// let mut builder = SpudBuilder::new();
     ///

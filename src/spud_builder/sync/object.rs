@@ -56,14 +56,14 @@ impl SpudObject {
     /// # Examples
     ///
     /// ```rust
-    /// use spud::{SpudBuilder, SpudObject, types::SpudString};
+    /// use spud_rs::{SpudBuilder, SpudObject, types::SpudString};
     ///
     /// let builder = SpudBuilder::new();
     ///
     /// builder.object(|obj| {
     ///     obj.add_value("example_field", SpudString::from("example_value"));
     ///
-    ///     OK(())
+    ///     Ok(())
     /// });
     ///
     /// // The object now contains the field "example_field" with the value "example_value".

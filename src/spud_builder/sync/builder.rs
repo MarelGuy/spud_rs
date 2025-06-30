@@ -22,7 +22,7 @@ pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>
 ///
 /// # Example
 /// ```rust
-/// use spud::SpudBuilder;
+/// use spud_rs::SpudBuilder;
 /// ```
 ///
 /// # Notes
@@ -43,7 +43,7 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud::SpudBuilder;
+    /// use spud_rs::SpudBuilder;
     ///
     /// let builder = SpudBuilder::new();
     /// ```
@@ -74,12 +74,12 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud::SpudBuilder;
+    /// use spud_rs::SpudBuilder;
     ///
     /// let builder = SpudBuilder::new();
     ///
     /// builder.object(|obj| {
-    ///     OK(())
+    ///     Ok(())
     /// });
     /// ```
     ///
@@ -119,12 +119,12 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud::SpudBuilder;
+    /// use spud_rs::SpudBuilder;
     ///
     /// let builder = SpudBuilder::new();
     ///
     /// builder.object(|obj| {
-    ///     OK(())
+    ///     Ok(())
     /// });
     ///
     /// let encoded_data = builder.encode().unwrap();
@@ -151,24 +151,6 @@ impl SpudBuilder {
     ///
     /// * `path_str` - The path to the directory where the file will be created.
     /// * `file_name` - The name of the file to create.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use spud::SpudBuilder;
-    ///
-    /// let mut builder = SpudBuilder::new();
-    ///
-    /// builder.object(|obj| {
-    ///     obj.add_value("val", 1u8)?;
-    ///
-    ///     Ok(())
-    /// })?;
-    ///
-    /// builder.encode()?;
-    ///
-    /// builder.build_file("./tmp", "file_name")?;
-    /// ```
     ///
     /// # Panics
     ///
