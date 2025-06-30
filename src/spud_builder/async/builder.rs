@@ -1,5 +1,6 @@
 use indexmap::IndexMap;
-use std::{fmt, path::Path, sync::Arc};
+
+use std::{fmt, future::Future, path::Path, sync::Arc};
 
 use tokio::{
     runtime::Runtime,
@@ -19,6 +20,7 @@ use super::SpudObject;
 #[derive(Default, Clone)]
 pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>>);
 
+#[derive(Default, Clone)]
 /// Represents a builder for creating SPUD objects.
 ///
 /// This builder allows you to create and manage SPUD objects, encode them into a byte vector, and write them to a file.
@@ -32,101 +34,120 @@ pub struct SpudBuilder {
     pub(crate) data: Arc<Mutex<Vec<u8>>>,
     pub(crate) objects: Arc<Mutex<ObjectMap>>,
     pub(crate) seen_ids: Arc<Mutex<Vec<bool>>>,
-    pub(crate) rt: Arc<Runtime>,
 }
 
 impl SpudBuilder {
     #[must_use]
     /// Creates a new `SpudBuilder` instance.
     ///
+    /// # Arguments
+    ///
+    /// * `rt` - A Tokio runtime instance that will be used for asynchronous operations.
+    ///
     /// # Examples
+    ///
     /// ```rust
     /// use spud::SpudBuilder;
-    /// let builder = SpudBuilder::new();
+    ///
+    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    /// let builder = SpudBuilder::new(rt);
+    ///
     /// ```
     ///
     /// # Returns
+    ///
     /// A new instance of `SpudBuilder`.
-    pub fn new(rt: Runtime) -> Self {
+    pub fn new() -> Self {
         let mut seen_ids: Vec<bool> = vec![false; 256];
 
         seen_ids[0] = true;
         seen_ids[1] = true;
-
-        let rt: Arc<Runtime> = Arc::new(rt);
 
         Self {
             field_names: Arc::new(Mutex::new(IndexMap::new())),
             data: Arc::new(Mutex::new(Vec::new())),
             objects: Arc::new(Mutex::new(ObjectMap(IndexMap::new()))),
             seen_ids: Arc::new(Mutex::new(seen_ids)),
-            rt,
         }
     }
 
     /// Creates a new `SpudObject` instance associated with this builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - A closure that takes a reference to the `SpudObject` and returns a `Result<(), SpudError>`.
+    ///
     /// # Examples
     ///
     /// ```rust
     /// use spud::SpudBuilder;
     ///
-    /// let builder = SpudBuilder::new();
+    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    ///
+    /// let builder = SpudBuilder::new(rt);
     ///
     /// builder.object(|obj| {
+    ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///
     ///     OK(())
     /// });
     /// ```
     ///
     /// # Returns
+    ///
     /// A new instance of `SpudObject` that is linked to the builder's field names, seen IDs, and objects.
     ///
     /// # Errors
     ///
     /// Returns an error if the object cannot be created, typically due to internal issues with the builder's state.
     ///
-    /// # Panics
-    ///
-    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    ///
     /// # Note
-    /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder, allowing for consistent data management.
-    /// Nothing is cloned, SPUD uses `Rc` and `RefCell` to manage shared ownership and mutability.
-    pub fn object<F>(&self, f: F) -> Result<(), SpudError>
+    ///
+    /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder.
+    pub async fn object<F, Fut>(&self, f: F) -> Result<(), SpudError>
     where
-        F: FnOnce(&SpudObject) -> Result<(), SpudError>,
+        F: FnOnce(Arc<Mutex<SpudObject>>) -> Fut,
+        Fut: Future<Output = Result<(), SpudError>>,
     {
-        let obj: Arc<Mutex<SpudObject>> = self.new_object()?;
+        let obj: Arc<Mutex<SpudObject>> = self.new_object().await?;
 
-        let locked_obj: MutexGuard<'_, SpudObject> = self.rt.block_on(obj.lock());
-
-        f(&locked_obj)?;
+        f(obj).await?;
 
         Ok(())
     }
 
-    fn new_object(&self) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
-        self.rt.block_on(SpudObject::new(
+    async fn new_object(&self) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
+        SpudObject::new(
             Arc::clone(&self.field_names),
             Arc::clone(&self.seen_ids),
             Arc::clone(&self.objects),
             Arc::clone(&self.data),
-            Arc::clone(&self.rt),
-        ))
+        )
+        .await
     }
 
     /// Encodes all objects associated with this builder into a byte vector.
     ///
     /// # Examples
+    ///
     /// ```rust
     /// use spud::SpudBuilder;
     ///
-    /// let builder = SpudBuilder::new();
+    ///
+    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    ///
+    /// let builder = SpudBuilder::new(rt);
     ///
     /// builder.object(|obj| {
+    ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///
+    ///     locked_obj.add_value("field_name", 42u8).await?;
+    ///
     ///     OK(())
     /// });
     ///
-    /// let encoded_data = builder.encode();
+    /// let encoded_data = builder.encode().await.unwrap();
+    ///
     /// ```
     ///
     /// # Errors
@@ -143,6 +164,53 @@ impl SpudBuilder {
 
         Ok(self.data.lock().await.clone())
     }
+
+    /// Builds the SPUD file at the specified path with the given file name.
+    ///
+    ///  # Arguments
+    ///
+    /// * `path_str` - The path to the directory where the file will be created.
+    /// * `file_name` - The name of the file to create.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use spud::SpudBuilder;
+    ///
+    /// let mut builder = SpudBuilder::new();
+    ///
+    /// builder.object(|obj| {
+    ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///
+    ///     locked_obj.add_value("val", 1u8)?;
+    ///
+    ///     Ok(())
+    /// })?;
+    ///
+    /// builder.encode().await?;
+    ///
+    /// builder.build_file("./tmp", "file_name").await?;
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the path is invalid
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
+    pub async fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), SpudError> {
+        let path_str: String = check_path(path_str, file_name)?;
+
+        let path: &Path = Path::new(&path_str);
+
+        let header: Vec<u8> =
+            initialise_header(&self.field_names.lock().await, &self.data.lock().await);
+
+        write(path, header).await?;
+
+        Ok(())
+    }
 }
 
 impl fmt::Debug for SpudBuilder {
@@ -150,16 +218,35 @@ impl fmt::Debug for SpudBuilder {
         let mut debug_builder: fmt::DebugStruct<'_, '_> = f.debug_struct("SpudBuilder");
 
         let field_names: MutexGuard<'_, IndexMap<(String, u8), u8>> =
-            self.rt.block_on(self.field_names.lock());
+            if let Ok(guard) = self.field_names.try_lock() {
+                guard
+            } else {
+                return Err(fmt::Error);
+            };
+
         debug_builder.field("field_names", &*field_names);
 
-        let data: MutexGuard<'_, Vec<u8>> = self.rt.block_on(self.data.lock());
+        let data: MutexGuard<'_, Vec<u8>> = if let Ok(guard) = self.data.try_lock() {
+            guard
+        } else {
+            return Err(fmt::Error);
+        };
+
         debug_builder.field("data", &*data);
 
-        let objects: MutexGuard<'_, ObjectMap> = self.rt.block_on(self.objects.lock());
+        let objects: MutexGuard<'_, ObjectMap> = if let Ok(guard) = self.objects.try_lock() {
+            guard
+        } else {
+            return Err(fmt::Error);
+        };
+
         debug_builder.field("objects", &*objects);
 
-        let seen_ids: MutexGuard<'_, Vec<bool>> = self.rt.block_on(self.seen_ids.lock());
+        let seen_ids: MutexGuard<'_, Vec<bool>> = if let Ok(guard) = self.seen_ids.try_lock() {
+            guard
+        } else {
+            return Err(fmt::Error);
+        };
 
         let mut seen_ids_to_display: IndexMap<usize, bool> = IndexMap::new();
 
@@ -187,33 +274,5 @@ impl fmt::Debug for ObjectMap {
         }
 
         debug_map.finish()
-    }
-}
-
-impl SpudBuilder {
-    /// Builds the SPUD file at the specified path with the given file name.
-    ///  # Arguments
-    ///
-    /// * `path_str` - The path to the directory where the file will be created.
-    /// * `file_name` - The name of the file to create.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the path is invalid
-    ///
-    /// # Panics
-    ///
-    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    pub async fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), SpudError> {
-        let path_str: String = check_path(path_str, file_name)?;
-
-        let path: &Path = Path::new(&path_str);
-
-        let header: Vec<u8> =
-            initialise_header(&self.field_names.lock().await, &self.data.lock().await);
-
-        write(path, header).await?;
-
-        Ok(())
     }
 }

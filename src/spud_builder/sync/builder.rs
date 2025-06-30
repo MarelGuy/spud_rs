@@ -24,6 +24,10 @@ pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>
 /// ```rust
 /// use spud::SpudBuilder;
 /// ```
+///
+/// # Notes
+///
+/// This builder is designed to be used in a synchronous context. There is an asynchronous version available if the `async` feature is enabled.
 #[derive(Default, Clone)]
 pub struct SpudBuilder {
     pub(crate) field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
@@ -37,12 +41,15 @@ impl SpudBuilder {
     /// Creates a new `SpudBuilder` instance.
     ///
     /// # Examples
+    ///
     /// ```rust
     /// use spud::SpudBuilder;
+    ///
     /// let builder = SpudBuilder::new();
     /// ```
     ///
     /// # Returns
+    ///
     /// A new instance of `SpudBuilder`.
     pub fn new() -> Self {
         let mut seen_ids: Vec<bool> = vec![false; 256];
@@ -59,6 +66,11 @@ impl SpudBuilder {
     }
 
     /// Creates a new `SpudObject` instance associated with this builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - A closure that takes a reference to the `SpudObject` and returns a `Result<(), SpudError>`.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -72,19 +84,16 @@ impl SpudBuilder {
     /// ```
     ///
     /// # Returns
+    ///
     /// A new instance of `SpudObject` that is linked to the builder's field names, seen IDs, and objects.
     ///
     /// # Errors
     ///
     /// Returns an error if the object cannot be created, typically due to internal issues with the builder's state.
     ///
-    /// # Panics
-    ///
-    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    ///
     /// # Note
-    /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder, allowing for consistent data management.
-    /// Nothing is cloned, SPUD uses `Rc` and `RefCell` to manage shared ownership and mutability.
+    ///
+    /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder.
     pub fn object<F>(&self, f: F) -> Result<(), SpudError>
     where
         F: FnOnce(&SpudObject) -> Result<(), SpudError>,
@@ -108,6 +117,7 @@ impl SpudBuilder {
     /// Encodes all objects associated with this builder into a byte vector.
     ///
     /// # Examples
+    ///
     /// ```rust
     /// use spud::SpudBuilder;
     ///
@@ -117,7 +127,7 @@ impl SpudBuilder {
     ///     OK(())
     /// });
     ///
-    /// let encoded_data = builder.encode();
+    /// let encoded_data = builder.encode().unwrap();
     /// ```
     ///
     /// # Errors
@@ -133,6 +143,57 @@ impl SpudBuilder {
         }
 
         Ok(self.data.lock().unwrap().clone())
+    }
+
+    /// Builds the SPUD file at the specified path with the given file name.
+    ///
+    ///  # Arguments
+    ///
+    /// * `path_str` - The path to the directory where the file will be created.
+    /// * `file_name` - The name of the file to create.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use spud::SpudBuilder;
+    ///
+    /// let mut builder = SpudBuilder::new();
+    ///
+    /// builder.object(|obj| {
+    ///     obj.add_value("val", 1u8)?;
+    ///
+    ///     Ok(())
+    /// })?;
+    ///
+    /// builder.encode()?;
+    ///
+    /// builder.build_file("./tmp", "file_name")?;
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the path is invalid
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the path is invalid
+    ///
+    /// # Notes
+    ///
+    /// There is an async version of this function available if the `async` feature is enabled.
+    pub fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), SpudError> {
+        let path_str: String = check_path(path_str, file_name)?;
+
+        let path: &Path = Path::new(&path_str);
+
+        let header: Vec<u8> = initialise_header(
+            &self.field_names.lock().unwrap(),
+            &self.data.lock().unwrap(),
+        );
+
+        fs::write(path, header)?;
+
+        Ok(())
     }
 }
 
@@ -166,39 +227,5 @@ impl fmt::Debug for ObjectMap {
         }
 
         debug_map.finish()
-    }
-}
-
-impl SpudBuilder {
-    /// Builds the SPUD file at the specified path with the given file name.
-    ///  # Arguments
-    ///
-    /// * `path_str` - The path to the directory where the file will be created.
-    /// * `file_name` - The name of the file to create.
-    ///
-    /// # Panics
-    ///
-    /// Will panic if the path is invalid
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the path is invalid
-    ///
-    /// # Notes
-    ///
-    /// There is an async version of this function available if the `async` feature is enabled.
-    pub fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), SpudError> {
-        let path_str: String = check_path(path_str, file_name)?;
-
-        let path: &Path = Path::new(&path_str);
-
-        let header: Vec<u8> = initialise_header(
-            &self.field_names.lock().unwrap(),
-            &self.data.lock().unwrap(),
-        );
-
-        fs::write(path, header)?;
-
-        Ok(())
     }
 }

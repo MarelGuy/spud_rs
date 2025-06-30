@@ -3,10 +3,7 @@
 use indexmap::{IndexMap, map::Values};
 use std::{pin::Pin, sync::Arc};
 
-use tokio::{
-    runtime::Runtime,
-    sync::{Mutex, MutexGuard},
-};
+use tokio::sync::{Mutex, MutexGuard};
 
 use crate::{
     SpudError, functions::generate_u8_id, spud_builder::spud_type_ext::SpudTypesExt,
@@ -24,7 +21,6 @@ pub struct SpudObject {
     field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
     seen_ids: Arc<Mutex<Vec<bool>>>,
     objects: Arc<Mutex<ObjectMap>>,
-    rt: Arc<Runtime>,
 }
 
 impl SpudObject {
@@ -33,7 +29,6 @@ impl SpudObject {
         seen_ids: Arc<Mutex<Vec<bool>>>,
         objects: Arc<Mutex<ObjectMap>>,
         data: Arc<Mutex<Vec<u8>>>,
-        rt: Arc<Runtime>,
     ) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
         data.lock()
             .await
@@ -47,7 +42,6 @@ impl SpudObject {
             field_names,
             seen_ids,
             objects: Arc::new(Mutex::new(ObjectMap(IndexMap::new()))),
-            rt: Arc::clone(&rt),
         }));
 
         objects.lock().await.0.insert(oid, Arc::clone(&object));
@@ -58,26 +52,30 @@ impl SpudObject {
     /// Adds a value to the object with the specified field name.
     ///
     /// # Arguments
+    ///
     /// * `field_name` - The name of the field to which the value will be added.
     /// * `value` - The value to be added, which must implement the `SpudTypesExt` trait.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use spud::{SpudBuilder, SpudObject, types::SpudString};
+    /// use spud::SpudBuilder;
     ///
-    /// let builder = SpudBuilder::new();
+    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    ///
+    /// let builder = SpudBuilder::new(rt);
     ///
     /// builder.object(|obj| {
-    ///     obj.add_value("example_field", SpudString::from("example_value"));
+    ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///
+    ///     locked_obj.add_value("field_name", 42u8)?;
     ///
     ///     OK(())
     /// });
-    ///
-    /// // The object now contains the field "example_field" with the value "example_value".
     /// ```
     ///
     /// # Returns
+    ///
     /// A mutable reference to the `SpudObject`, allowing for method chaining.
     ///
     /// # Errors
@@ -87,19 +85,23 @@ impl SpudObject {
     /// # Panics
     ///
     /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    pub fn add_value<T: SpudTypesExt>(
+    pub async fn add_value<T: SpudTypesExt>(
         &self,
         field_name: &str,
         value: T,
     ) -> Result<&Self, SpudError> {
-        self.rt.block_on(self.add_field_name(field_name))?;
+        self.add_field_name(field_name).await?;
 
-        value.write_spud_bytes(&mut self.rt.block_on(self.data.lock()));
+        value.write_spud_bytes(&mut *self.data.lock().await);
 
         Ok(self)
     }
 
     /// Creates a new `SpudObject` instance associated with this Object.
+    ///
+    /// # Arguments
+    ///
+    /// * `field_name` - The name of the field to which the object will be added.
     ///
     /// # Errors
     ///
@@ -108,15 +110,15 @@ impl SpudObject {
     /// # Panics
     ///
     /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    pub fn object<F>(&self, field_name: &str, f: F) -> Result<(), SpudError>
+    pub async fn object<F>(&self, field_name: &str, f: F) -> Result<(), SpudError>
     where
         F: FnOnce(&SpudObject) -> Result<(), SpudError>,
     {
-        self.rt.block_on(self.add_field_name(field_name))?;
+        self.add_field_name(field_name).await?;
 
-        let obj: Arc<Mutex<SpudObject>> = self.rt.block_on(self.new_object())?;
+        let obj: Arc<Mutex<SpudObject>> = self.new_object().await?;
 
-        let locked_obj: MutexGuard<'_, SpudObject> = self.rt.block_on(obj.lock());
+        let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
 
         f(&locked_obj)?;
 
@@ -129,7 +131,6 @@ impl SpudObject {
             Arc::clone(&self.seen_ids),
             Arc::clone(&self.objects),
             Arc::clone(&self.data),
-            Arc::clone(&self.rt),
         )
         .await
     }
