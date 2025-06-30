@@ -39,10 +39,17 @@ mod tests {
     #[test]
     fn test_initialise_header() {
         let mut field_names: IndexMap<(String, u8), u8> = IndexMap::new();
-        field_names.insert(("field1".to_string(), 1), 1);
-        field_names.insert(("field2".to_string(), 2), 2);
 
-        let data: Vec<u8> = vec![0x01, 0x02, 0x03];
+        let field_name_1: String = "foo".into();
+        let field_name_2: String = "bar".into();
+
+        let field_name_1_len: u8 = field_name_1.len().try_into().unwrap();
+        let field_name_2_len: u8 = field_name_2.len().try_into().unwrap();
+
+        field_names.insert((field_name_1, field_name_1_len), 1);
+        field_names.insert((field_name_2, field_name_2_len), 2);
+
+        let data: Vec<u8> = vec![];
 
         #[cfg(not(feature = "async"))]
         let field_names: Mutex<IndexMap<(String, u8), u8>> = Mutex::new(field_names);
@@ -52,27 +59,17 @@ mod tests {
 
         let header: Vec<u8> = initialise_header(&field_names.try_lock().unwrap(), &data);
 
-        assert_eq!(&header[0..SPUD_VERSION.len()], SPUD_VERSION.as_bytes());
-        assert_eq!(&header[SPUD_VERSION.len()..SPUD_VERSION.len() + 1], &[1]);
         assert_eq!(
-            &header[SPUD_VERSION.len() + 1..SPUD_VERSION.len() + 7],
-            b"field1"
+            header.len(),
+            SPUD_VERSION.len()
+                + field_name_1_len as usize
+                + 2 // 1 byte for field name length, 1 byte for field ID
+                + field_name_2_len as usize
+                + 2 // 1 byte for field name length, 1 byte for field ID
+                + 1 // 1 byte for FieldNameListEnd
+                + data.len()
+                + 4 // 4 bytes for the end marker (0xDE, 0xAD, 0xBE, 0xEF)
         );
-        assert_eq!(
-            &header[SPUD_VERSION.len() + 7..SPUD_VERSION.len() + 8],
-            &[1]
-        );
-        assert_eq!(
-            &header[SPUD_VERSION.len() + 8..SPUD_VERSION.len() + 9],
-            &[2]
-        );
-        assert_eq!(
-            &header[SPUD_VERSION.len() + 9..SPUD_VERSION.len() + 15],
-            b"field2"
-        );
-        assert_eq!(
-            &header[SPUD_VERSION.len() + 15..],
-            &[2, 1, 1, 2, 3, 0xDE, 0xAD, 0xBE, 0xEF]
-        );
+        assert_eq!(&header[..SPUD_VERSION.len()], SPUD_VERSION.as_bytes());
     }
 }

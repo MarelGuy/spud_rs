@@ -278,3 +278,17 @@ impl fmt::Debug for ObjectMap {
         debug_map.finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_spud_builder_new() {
+        let builder = SpudBuilder::new();
+        assert!(builder.field_names.lock().await.is_empty());
+        assert!(builder.data.lock().await.is_empty());
+        assert!(builder.objects.lock().await.0.is_empty());
+        assert_eq!(builder.seen_ids.lock().await.len(), 256);
+    }
+}
