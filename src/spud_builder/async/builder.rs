@@ -32,7 +32,7 @@ pub struct SpudBuilder {
     pub(crate) data: Arc<Mutex<Vec<u8>>>,
     pub(crate) objects: Arc<Mutex<ObjectMap>>,
     pub(crate) seen_ids: Arc<Mutex<Vec<bool>>>,
-    pub(crate) rt: Runtime,
+    pub(crate) rt: Arc<Runtime>,
 }
 
 impl SpudBuilder {
@@ -52,6 +52,8 @@ impl SpudBuilder {
 
         seen_ids[0] = true;
         seen_ids[1] = true;
+
+        let rt: Arc<Runtime> = Arc::new(rt);
 
         Self {
             field_names: Arc::new(Mutex::new(IndexMap::new())),
@@ -89,15 +91,15 @@ impl SpudBuilder {
     /// # Note
     /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder, allowing for consistent data management.
     /// Nothing is cloned, SPUD uses `Rc` and `RefCell` to manage shared ownership and mutability.
-    pub fn object<F, Fut>(&self, f: F) -> Result<(), SpudError>
+    pub fn object<F>(&self, f: F) -> Result<(), SpudError>
     where
-        F: FnOnce(&SpudObject) -> Fut,
+        F: FnOnce(&SpudObject) -> Result<(), SpudError>,
     {
         let obj: Arc<Mutex<SpudObject>> = self.new_object()?;
 
         let locked_obj: MutexGuard<'_, SpudObject> = self.rt.block_on(obj.lock());
 
-        f(&locked_obj);
+        f(&locked_obj)?;
 
         Ok(())
     }
@@ -108,6 +110,7 @@ impl SpudBuilder {
             Arc::clone(&self.seen_ids),
             Arc::clone(&self.objects),
             Arc::clone(&self.data),
+            Arc::clone(&self.rt),
         ))
     }
 

@@ -3,7 +3,10 @@
 use indexmap::{IndexMap, map::Values};
 use std::{pin::Pin, sync::Arc};
 
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::{
+    runtime::Runtime,
+    sync::{Mutex, MutexGuard},
+};
 
 use crate::{
     SpudError, functions::generate_u8_id, spud_builder::spud_type_ext::SpudTypesExt,
@@ -21,6 +24,7 @@ pub struct SpudObject {
     field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
     seen_ids: Arc<Mutex<Vec<bool>>>,
     objects: Arc<Mutex<ObjectMap>>,
+    rt: Arc<Runtime>,
 }
 
 impl SpudObject {
@@ -29,6 +33,7 @@ impl SpudObject {
         seen_ids: Arc<Mutex<Vec<bool>>>,
         objects: Arc<Mutex<ObjectMap>>,
         data: Arc<Mutex<Vec<u8>>>,
+        rt: Arc<Runtime>,
     ) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
         data.lock()
             .await
@@ -42,6 +47,7 @@ impl SpudObject {
             field_names,
             seen_ids,
             objects: Arc::new(Mutex::new(ObjectMap(IndexMap::new()))),
+            rt: Arc::clone(&rt),
         }));
 
         objects.lock().await.0.insert(oid, Arc::clone(&object));
@@ -81,14 +87,14 @@ impl SpudObject {
     /// # Panics
     ///
     /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    pub async fn add_value<T: SpudTypesExt>(
+    pub fn add_value<T: SpudTypesExt>(
         &self,
         field_name: &str,
         value: T,
     ) -> Result<&Self, SpudError> {
-        self.add_field_name(field_name).await?;
+        self.rt.block_on(self.add_field_name(field_name))?;
 
-        value.write_spud_bytes(&mut *self.data.lock().await);
+        value.write_spud_bytes(&mut self.rt.block_on(self.data.lock()));
 
         Ok(self)
     }
@@ -102,15 +108,17 @@ impl SpudObject {
     /// # Panics
     ///
     /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    pub async fn object<F>(&self, field_name: &str, f: F) -> Result<(), SpudError>
+    pub fn object<F>(&self, field_name: &str, f: F) -> Result<(), SpudError>
     where
         F: FnOnce(&SpudObject) -> Result<(), SpudError>,
     {
-        self.add_field_name(field_name).await?;
+        self.rt.block_on(self.add_field_name(field_name))?;
 
-        let obj: Arc<Mutex<SpudObject>> = self.new_object().await?;
+        let obj: Arc<Mutex<SpudObject>> = self.rt.block_on(self.new_object())?;
 
-        f(&*obj.lock().await)?;
+        let locked_obj: MutexGuard<'_, SpudObject> = self.rt.block_on(obj.lock());
+
+        f(&locked_obj)?;
 
         Ok(())
     }
@@ -121,6 +129,7 @@ impl SpudObject {
             Arc::clone(&self.seen_ids),
             Arc::clone(&self.objects),
             Arc::clone(&self.data),
+            Arc::clone(&self.rt),
         )
         .await
     }
