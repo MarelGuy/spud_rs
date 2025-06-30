@@ -44,8 +44,7 @@ impl SpudBuilder {
     /// ```rust
     /// use spud_rs::SpudBuilder;
     ///
-    /// let rt = tokio::runtime::Runtime::new().unwrap();
-    /// let builder = SpudBuilder::new(rt);
+    /// let builder = SpudBuilder::new();
     ///
     /// ```
     ///
@@ -75,17 +74,20 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::SpudBuilder;
+    /// use spud_rs::{SpudBuilder, SpudObject};
+    /// use tokio::sync::MutexGuard;
     ///
-    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    /// async fn foo() -> Result<(), spud_rs::SpudError> {
+    ///     let builder = SpudBuilder::new();
     ///
-    /// let builder = SpudBuilder::new(rt);
+    ///     builder.object(async |obj| {
+    ///         let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
     ///
-    /// builder.object(|obj| {
-    ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///         Ok(())
+    ///        }).await?;
     ///
     ///     Ok(())
-    /// });
+    /// }
     /// ```
     ///
     /// # Returns
@@ -126,23 +128,23 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::SpudBuilder;
+    /// use spud_rs::{SpudBuilder, SpudObject};
+    /// use tokio::sync::MutexGuard;
     ///
+    /// async fn foo() -> Result<(), spud_rs::SpudError> {
+    ///     let builder = SpudBuilder::new();
     ///
-    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    ///     builder.object(async |obj| {
+    ///         let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
     ///
-    /// let builder = SpudBuilder::new(rt);
+    ///         locked_obj.add_value("field_name", 42u8).await?;
     ///
-    /// builder.object(|obj| {
-    ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///         Ok(())
+    ///     });
     ///
-    ///     locked_obj.add_value("field_name", 42u8).await?;
-    ///
+    ///     let encoded_data = builder.encode().await?;
     ///     Ok(())
-    /// });
-    ///
-    /// let encoded_data = builder.encode().await.unwrap();
-    ///
+    /// }
     /// ```
     ///
     /// # Errors
@@ -170,21 +172,26 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::SpudBuilder;
+    /// use spud_rs::{SpudBuilder, SpudObject};
+    /// use tokio::sync::MutexGuard;
     ///
-    /// let mut builder = SpudBuilder::new();
+    /// async fn foo() -> Result<(), spud_rs::SpudError> {
+    ///     let mut builder = SpudBuilder::new();
     ///
-    /// builder.object(|obj| {
-    ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///     builder.object(async |obj| {
+    ///         let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
     ///
-    ///     locked_obj.add_value("val", 1u8)?;
+    ///         locked_obj.add_value("val", 1u8).await?;
+    ///
+    ///         Ok(())
+    ///     }).await?;
+    ///
+    ///     builder.encode().await?;
+    ///
+    ///     builder.build_file("./tmp", "file_name").await?;
     ///
     ///     Ok(())
-    /// })?;
-    ///
-    /// builder.encode().await?;
-    ///
-    /// builder.build_file("./tmp", "file_name").await?;
+    /// }
     /// ```
     ///
     /// # Errors

@@ -59,18 +59,17 @@ impl SpudObject {
     /// # Examples
     ///
     /// ```rust
-    /// use spud::SpudBuilder;
+    /// use spud_rs::{SpudBuilder, SpudObject};
+    /// use tokio::sync::MutexGuard;
     ///
-    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    /// let builder = SpudBuilder::new();
     ///
-    /// let builder = SpudBuilder::new(rt);
-    ///
-    /// builder.object(|obj| {
+    /// builder.object(async |obj| {
     ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
     ///
-    ///     locked_obj.add_value("field_name", 42u8)?;
+    ///     locked_obj.add_value("field_name", 42u8).await?;
     ///
-    ///     OK(())
+    ///     Ok(())
     /// });
     /// ```
     ///
