@@ -1,6 +1,12 @@
 use crate::SpudError;
 
-pub(crate) fn generate_u8_id(id_vec: &mut Vec<bool>) -> Result<u8, SpudError> {
+#[cfg(not(feature = "async"))]
+type VecBool = Vec<bool>;
+
+#[cfg(feature = "async")]
+type VecBool<'a> = tokio::sync::MutexGuard<'a, Vec<bool>>;
+
+pub(crate) fn generate_u8_id(id_vec: &mut VecBool) -> Result<u8, SpudError> {
     let mut id: [u8; 1] = [0_u8; 1];
 
     getrandom::fill(&mut id)?;

@@ -1,5 +1,3 @@
-#![allow(clippy::needless_pass_by_value)]
-
 use indexmap::IndexMap;
 use std::{fmt, path::Path, sync::Arc};
 
@@ -11,10 +9,6 @@ use crate::{
     types::ObjectId,
 };
 
-#[cfg(feature = "async")]
-use tokio::fs::write;
-
-#[cfg(not(feature = "async"))]
 use std::fs;
 
 use super::SpudObject;
@@ -176,36 +170,6 @@ impl fmt::Debug for ObjectMap {
 }
 
 impl SpudBuilder {
-    #[cfg(feature = "async")]
-    /// Builds the SPUD file at the specified path with the given file name.
-    ///  # Arguments
-    ///
-    /// * `path_str` - The path to the directory where the file will be created.
-    /// * `file_name` - The name of the file to create.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the path is invalid
-    ///
-    /// # Panics
-    ///
-    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    pub async fn build_file(&mut self, path_str: &str, file_name: &str) -> Result<(), SpudError> {
-        let path_str: String = check_path(path_str, file_name)?;
-
-        let path: &Path = Path::new(&path_str);
-
-        let header: Vec<u8> = initialise_header(
-            &self.field_names.lock().unwrap(),
-            &self.data.lock().unwrap(),
-        );
-
-        write(path, header).await?;
-
-        Ok(())
-    }
-
-    #[cfg(not(feature = "async"))]
     /// Builds the SPUD file at the specified path with the given file name.
     ///  # Arguments
     ///
@@ -228,7 +192,10 @@ impl SpudBuilder {
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> = initialise_header(&self.field_names.borrow(), &self.data.borrow());
+        let header: Vec<u8> = initialise_header(
+            &self.field_names.lock().unwrap(),
+            &self.data.lock().unwrap(),
+        );
 
         fs::write(path, header)?;
 
