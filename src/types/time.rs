@@ -120,8 +120,6 @@ impl FromStr for Time {
             parts.push(ns_parts[1]);
         }
 
-        println!("Parts: {parts:?}");
-
         let hour: u8 = u8::from_str(parts[0])
             .map_err(|_| SpudError::ValidationError("Invalid hour".to_owned()))?;
         let minute: u8 = u8::from_str(parts[1])
