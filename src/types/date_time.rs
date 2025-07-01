@@ -48,6 +48,7 @@ impl TryFrom<NaiveDateTime> for DateTime {
 impl FromStr for DateTime {
     type Err = core::fmt::Error;
 
+    /// Parses a string in the format "YYYY-MM-DD HH:MM:SS.NS" into a `DateTime` instance.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split_whitespace().collect();
 

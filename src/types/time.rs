@@ -105,6 +105,7 @@ impl TryFrom<NaiveDateTime> for Time {
 impl FromStr for Time {
     type Err = fmt::Error;
 
+    /// Parses a string in the format "HH:MM:SS" or "HH:MM:SS.NS" into a `Time` instance.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split(':').collect();
         if parts.len() != 3 && parts.len() != 4 {

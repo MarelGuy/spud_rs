@@ -21,20 +21,15 @@ impl Date {
     ///
     /// Returns an error if the month is not between 1 and 12, or if the day is not valid for the given month and year.
     pub fn new(year: u16, month: u8, day: u8) -> Result<Self, SpudError> {
-        // Il controllo sul mese rimane invariato
         if !(1..=12).contains(&month) {
             return Err(SpudError::ValidationError(
-                "Il mese deve essere compreso tra 1 e 12".into(),
+                "The month must be between 1 and 12".into(),
             ));
         }
 
-        // Determiniamo il numero massimo di giorni per il mese inserito
         let max_days: u8 = match month {
-            // Mesi con 31 giorni
             1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-            // Mesi con 30 giorni
             4 | 6 | 9 | 11 => 30,
-            // Febbraio
             2 => {
                 if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) {
                     29
@@ -42,14 +37,12 @@ impl Date {
                     28
                 }
             }
-            // Questo caso è teoricamente irraggiungibile grazie al primo controllo
             _ => unreachable!(),
         };
 
-        // Ora controlliamo che il giorno sia valido per quel mese specifico
         if !(1..=max_days).contains(&day) {
             return Err(SpudError::ValidationError(format!(
-                "Giorno non valido. Il mese {month} dell'anno {year} ha {max_days} giorni."
+                "Invalid day. The month {month} of the year {year} has {max_days} days."
             )));
         }
 
@@ -99,6 +92,8 @@ impl TryFrom<NaiveDateTime> for Date {
 
 impl FromStr for Date {
     type Err = fmt::Error;
+
+    /// Parses a string in the format "YYYY-MM-DD" into a `Date` instance.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split('-').collect();
 
