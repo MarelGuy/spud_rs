@@ -103,20 +103,34 @@ impl TryFrom<NaiveDateTime> for Time {
 }
 
 impl FromStr for Time {
-    type Err = fmt::Error;
+    type Err = SpudError;
 
     /// Parses a string in the format "HH:MM:SS" or "HH:MM:SS.NS" into a `Time` instance.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split(':').collect();
-        if parts.len() != 3 && parts.len() != 4 {
-            return Err(fmt::Error);
+        let mut parts: Vec<&str> = s.split(':').collect();
+
+        if parts.len() != 3 {
+            return Err(SpudError::ValidationError("Invalid time format".to_owned()));
         }
 
-        let hour: u8 = u8::from_str(parts[0]).map_err(|_| fmt::Error)?;
-        let minute: u8 = u8::from_str(parts[1]).map_err(|_| fmt::Error)?;
-        let second: u8 = u8::from_str(parts[2]).map_err(|_| fmt::Error)?;
-        let nanosecond: u32 = if parts.len() == 4 {
-            u32::from_str(parts[3]).map_err(|_| fmt::Error)?
+        if parts[2].contains('.') {
+            let ns_parts: Vec<&str> = parts[2].split('.').collect();
+
+            parts[2] = ns_parts[0];
+            parts.push(ns_parts[1]);
+        }
+
+        println!("Parts: {parts:?}");
+
+        let hour: u8 = u8::from_str(parts[0])
+            .map_err(|_| SpudError::ValidationError("Invalid hour".to_owned()))?;
+        let minute: u8 = u8::from_str(parts[1])
+            .map_err(|_| SpudError::ValidationError("Invalid minute".to_owned()))?;
+        let second: u8 = u8::from_str(parts[2])
+            .map_err(|_| SpudError::ValidationError("Invalid second".to_owned()))?;
+        let nanosecond: u32 = if parts.len() > 3 {
+            u32::from_str(parts[3])
+                .map_err(|_| SpudError::ValidationError("Invalid nanosecond".to_owned()))?
         } else {
             0
         };

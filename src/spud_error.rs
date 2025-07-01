@@ -97,3 +97,9 @@ impl From<TryFromSliceError> for SpudError {
         SpudError::TryFromSlice(err)
     }
 }
+
+impl From<SpudError> for std::fmt::Error {
+    fn from(_: SpudError) -> std::fmt::Error {
+        std::fmt::Error
+    }
+}
