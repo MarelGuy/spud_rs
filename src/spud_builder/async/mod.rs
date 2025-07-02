@@ -4,7 +4,7 @@ mod object;
 pub use builder::SpudBuilder;
 pub use object::SpudObject;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "async"))]
 mod tests {
     use core::str::FromStr;
     use std::sync::Arc;
@@ -42,8 +42,6 @@ mod tests {
             .unwrap();
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().await;
-
-        println!("{data:?}",);
 
         assert_eq!(
             data[0..2],
