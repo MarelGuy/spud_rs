@@ -28,9 +28,10 @@ impl SpudObject {
         objects: Arc<Mutex<ObjectMap>>,
         data: Arc<Mutex<Vec<u8>>>,
     ) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
-        data.lock()
-            .unwrap()
-            .extend_from_slice(&[SpudTypes::ObjectStart as u8, SpudTypes::ObjectStart as u8]);
+        data.lock().unwrap().extend_from_slice(&[
+            SpudTypes::ObjectStart.as_u8(),
+            SpudTypes::ObjectStart.as_u8(),
+        ]);
 
         let oid: ObjectId = Self::generate_oid(&mut data.lock().unwrap())?;
 
@@ -125,8 +126,8 @@ impl SpudObject {
     pub(crate) fn encode(&self) -> Result<(), SpudError> {
         let mut data: MutexGuard<'_, Vec<u8>> = self.data.lock().unwrap();
 
-        data.push(SpudTypes::ObjectEnd as u8);
-        data.push(SpudTypes::ObjectEnd as u8);
+        data.push(SpudTypes::ObjectEnd.as_u8());
+        data.push(SpudTypes::ObjectEnd.as_u8());
 
         let objects: MutexGuard<'_, ObjectMap> = self.objects.lock().unwrap();
         let objects: Values<'_, ObjectId, Arc<Mutex<SpudObject>>> = objects.0.values();
@@ -152,7 +153,10 @@ impl SpudObject {
             id
         };
 
-        self.data.lock().unwrap().push(SpudTypes::FieldNameId as u8);
+        self.data
+            .lock()
+            .unwrap()
+            .push(SpudTypes::FieldNameId.as_u8());
         self.data.lock().unwrap().push(id);
 
         Ok(self)

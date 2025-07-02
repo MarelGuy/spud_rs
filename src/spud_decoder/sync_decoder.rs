@@ -4,17 +4,12 @@ use std::path::Path;
 use indexmap::IndexMap;
 use serde_json::Value;
 
-use tokio::{
-    fs::{File as TokioFile, read as tokio_read},
-    io::AsyncWriteExt,
+use std::{
+    fs::{File as StdFile, read as std_read},
+    io::Write,
 };
 
-use crate::{
-    SPUD_VERSION, SpudError, spud_decoder::r#async::decode_object::DecoderObject,
-    spud_types::SpudTypes,
-};
-
-mod decode_object;
+use crate::{SPUD_VERSION, SpudError, spud_decoder::DecoderObject, spud_types::SpudTypes};
 
 /// The `SpudDecoder` is responsible for decoding SPUD files into a JSON format.
 #[derive(Default, Debug, Clone)]
@@ -50,7 +45,7 @@ impl SpudDecoder {
 
         let field_name_list_end_byte_index: Option<usize> = file_contents
             .iter()
-            .position(|&x| x == SpudTypes::FieldNameListEnd as u8);
+            .position(|&x| x == SpudTypes::FieldNameListEnd.as_u8());
 
         match field_name_list_end_byte_index {
             Some(index) => {
@@ -80,7 +75,7 @@ impl SpudDecoder {
 
                     field_names.insert(field_id, decoded_field_name);
 
-                    if field_names_bytes[cursor] == SpudTypes::FieldNameListEnd as u8 {
+                    if field_names_bytes[cursor] == SpudTypes::FieldNameListEnd.as_u8() {
                         break;
                     }
                 }
@@ -146,15 +141,16 @@ impl SpudDecoder {
         let mut old_byte: u8 = 0;
 
         for byte in &self.file_contents {
-            if *byte == SpudTypes::ObjectStart as u8 && old_byte == SpudTypes::ObjectStart as u8 {
+            if *byte == SpudTypes::ObjectStart.as_u8() && old_byte == SpudTypes::ObjectStart.as_u8()
+            {
                 current_object.clear();
             }
 
-            if *byte == SpudTypes::ObjectEnd as u8 && old_byte == SpudTypes::ObjectEnd as u8 {
+            if *byte == SpudTypes::ObjectEnd.as_u8() && old_byte == SpudTypes::ObjectEnd.as_u8() {
                 let last: u8 = current_object[current_object.len() - 1];
                 let first: u8 = current_object[0];
 
-                if first != SpudTypes::ObjectStart as u8 || last != SpudTypes::ObjectEnd as u8 {
+                if first != SpudTypes::ObjectStart.as_u8() || last != SpudTypes::ObjectEnd.as_u8() {
                     return Err(SpudError::DecodingError(format!(
                         "Invalid SPUD file: object start or end byte mismatch: {first}, {last}"
                     )));
@@ -182,11 +178,19 @@ impl SpudDecoder {
     ///
     /// * `path` - The path to the file to read.
     ///
+    /// # Panics
+    ///
+    /// Will panic if the path is invalid
+    ///
     /// # Errors
     ///
     /// Will return an error if the path is invalid
-    pub async fn new_from_path(path: &str) -> Result<Self, SpudError> {
-        let file: Vec<u8> = tokio_read(path).await?;
+    ///
+    /// # Notes
+    ///
+    /// There is an async version of this function available if the `async` feature is enabled.
+    pub fn new_from_path(path: &str) -> Result<Self, SpudError> {
+        let file: Vec<u8> = std_read(path)?;
 
         Self::new(&file)
     }
@@ -197,14 +201,19 @@ impl SpudDecoder {
     /// * `path_str` - The path to the directory where the file will be created.
     /// * `file_name` - The name of the file to create.
     ///
+    /// # Panics
+    ///
+    /// Panics if the file has errors being written
+    ///
     /// # Errors
     ///
     /// Will return an error if the file has errors being written
-    pub async fn build_file(&self, path: &str) -> Result<(), SpudError> {
-        TokioFile::create(Path::new(path))
-            .await?
-            .write_all(self.output_json.as_bytes())
-            .await?;
+    ///
+    /// # Notes
+    ///
+    /// There is an async version of this function available if the `async` feature is enabled.
+    pub fn build_file(&self, path: &str) -> Result<(), SpudError> {
+        StdFile::create(Path::new(path))?.write_all(self.output_json.as_bytes())?;
 
         Ok(())
     }

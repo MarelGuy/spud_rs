@@ -12,7 +12,7 @@ mod tests {
 
     use crate::{
         SpudBuilder, SpudObject,
-        spud_types::SpudTypes,
+        spud_types::{SpudNumberTypes, SpudTypes},
         types::{BinaryBlob, SpudString},
     };
 
@@ -37,7 +37,10 @@ mod tests {
 
         assert_eq!(
             data[0..2],
-            [SpudTypes::ObjectStart as u8, SpudTypes::ObjectStart as u8]
+            [
+                SpudTypes::ObjectStart.as_u8(),
+                SpudTypes::ObjectStart.as_u8()
+            ]
         );
     }
 
@@ -55,7 +58,7 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 1], SpudTypes::Null as u8);
+        assert_eq!(data[data.len() - 1], SpudTypes::Null.as_u8());
     }
 
     #[test]
@@ -72,7 +75,7 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 2], SpudTypes::Bool as u8);
+        assert_eq!(data[data.len() - 2], SpudTypes::Bool.as_u8());
         assert_eq!(data[data.len() - 1], 1);
     }
 
@@ -90,7 +93,10 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 2], SpudTypes::U8 as u8);
+        assert_eq!(
+            data[data.len() - 2],
+            SpudTypes::Number(SpudNumberTypes::U8).as_u8()
+        );
         assert_eq!(data[data.len() - 1], 42);
     }
     #[test]
@@ -107,7 +113,10 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 3], SpudTypes::U16 as u8);
+        assert_eq!(
+            data[data.len() - 3],
+            SpudTypes::Number(SpudNumberTypes::U16).as_u8()
+        );
         assert_eq!(data[data.len() - 2..data.len()], [0, 1]);
     }
 
@@ -125,7 +134,10 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 5], SpudTypes::U32 as u8);
+        assert_eq!(
+            data[data.len() - 5],
+            SpudTypes::Number(SpudNumberTypes::U32).as_u8()
+        );
         assert_eq!(data[data.len() - 4..data.len()], [0, 0, 1, 0]);
     }
 
@@ -143,7 +155,10 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 9], SpudTypes::U64 as u8);
+        assert_eq!(
+            data[data.len() - 9],
+            SpudTypes::Number(SpudNumberTypes::U64).as_u8()
+        );
         assert_eq!(data[data.len() - 8..data.len()], [0, 0, 0, 0, 1, 0, 0, 0]);
     }
 
@@ -161,7 +176,10 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 5], SpudTypes::F32 as u8);
+        assert_eq!(
+            data[data.len() - 5],
+            SpudTypes::Number(SpudNumberTypes::F32).as_u8()
+        );
         assert!(
             (f32::from_le_bytes(data[data.len() - 4..data.len()].try_into().unwrap()) - 3.15f32)
                 .abs()
@@ -183,7 +201,10 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 9], SpudTypes::F64 as u8);
+        assert_eq!(
+            data[data.len() - 9],
+            SpudTypes::Number(SpudNumberTypes::F64).as_u8()
+        );
         assert!(
             (f64::from_le_bytes(data[data.len() - 8..data.len()].try_into().unwrap()) - 3.15f64)
                 .abs()
@@ -208,7 +229,7 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 17], SpudTypes::Decimal as u8);
+        assert_eq!(data[data.len() - 17], SpudTypes::Decimal.as_u8());
 
         let data_decimal_bytes: [u8; 16] = data[data.len() - 16..data.len()].try_into().unwrap();
         let decimal: [u8; 16] = rust_decimal::Decimal::from_f32_retain(1.0)
@@ -232,7 +253,7 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 15], SpudTypes::String as u8);
+        assert_eq!(data[data.len() - 15], SpudTypes::String.as_u8());
         assert_eq!(data[data.len() - 13], 12);
         assert_eq!(&data[data.len() - 12..data.len()], b"Hello, SPUD!");
     }
@@ -254,7 +275,7 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 8], SpudTypes::BinaryBlob as u8);
+        assert_eq!(data[data.len() - 8], SpudTypes::BinaryBlob.as_u8());
         assert_eq!(data[data.len() - 6], 5);
         assert_eq!(
             &data[data.len() - 5..data.len()],
@@ -276,20 +297,20 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 8], SpudTypes::ArrayStart as u8);
+        assert_eq!(data[data.len() - 8], SpudTypes::ArrayStart.as_u8());
         assert_eq!(
             data[data.len() - 7..data.len() - 5],
-            [SpudTypes::U8 as u8, 1]
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 1]
         );
         assert_eq!(
             data[data.len() - 5..data.len() - 3],
-            [SpudTypes::U8 as u8, 2]
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 2]
         );
         assert_eq!(
             data[data.len() - 3..data.len() - 1],
-            [SpudTypes::U8 as u8, 3]
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 3]
         );
-        assert_eq!(data[data.len() - 1], SpudTypes::ArrayEnd as u8);
+        assert_eq!(data[data.len() - 1], SpudTypes::ArrayEnd.as_u8());
     }
 
     #[test]
@@ -308,7 +329,7 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 5], SpudTypes::Date as u8);
+        assert_eq!(data[data.len() - 5], SpudTypes::Date.as_u8());
         assert_eq!(
             &data[data.len() - 4..data.len()],
             &Date::from_str("2023-10-01").unwrap().as_le_bytes()
@@ -331,7 +352,7 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 8], SpudTypes::Time as u8);
+        assert_eq!(data[data.len() - 8], SpudTypes::Time.as_u8());
         assert_eq!(
             &data[data.len() - 7..data.len()],
             &Time::from_str("12:34:56.7890").unwrap().as_le_bytes()
@@ -357,7 +378,7 @@ mod tests {
 
         let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
 
-        assert_eq!(data[data.len() - 12], SpudTypes::DateTime as u8);
+        assert_eq!(data[data.len() - 12], SpudTypes::DateTime.as_u8());
         assert_eq!(
             &data[data.len() - 11..data.len()],
             &DateTime::from_str("2023-10-01 12:34:56.7890")

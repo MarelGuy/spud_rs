@@ -19,7 +19,7 @@ pub(crate) fn initialise_header(field_names: &FieldNames, data: &[u8]) -> Vec<u8
         header.push(*id);
     }
 
-    header.push(SpudTypes::FieldNameListEnd as u8);
+    header.push(SpudTypes::FieldNameListEnd.as_u8());
 
     header.extend_from_slice(data);
     header.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
