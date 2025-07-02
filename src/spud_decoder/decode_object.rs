@@ -191,7 +191,7 @@ impl<'a> DecoderObject<'a> {
             Ok(None)
         } else {
             let return_value: Value = match decode_result {
-                Some(SpudTypes::Null) => null(&mut next_steps)?,
+                Some(SpudTypes::Null) => null(&mut next_steps),
                 Some(SpudTypes::Bool) => d_bool(self, &mut next_steps)?,
                 Some(SpudTypes::Number(number_type)) => number(self, number_type)?,
                 Some(SpudTypes::Decimal) => decimal(self)?,
