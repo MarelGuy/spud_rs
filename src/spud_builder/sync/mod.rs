@@ -163,6 +163,30 @@ mod tests {
     }
 
     #[test]
+    fn test_spud_builder_object_u128() {
+        let builder: SpudBuilder = SpudBuilder::new();
+
+        builder
+            .object(|obj: &SpudObject| {
+                obj.add_value("u128", 18_446_744_073_709_551_616u128)?;
+
+                Ok(())
+            })
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        assert_eq!(
+            data[data.len() - 17],
+            SpudTypes::Number(SpudNumberTypes::U128).as_u8()
+        );
+        assert_eq!(
+            data[data.len() - 16..data.len()],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+        );
+    }
+
+    #[test]
     fn test_spud_builder_object_f32() {
         let builder: SpudBuilder = SpudBuilder::new();
 

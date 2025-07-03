@@ -116,6 +116,7 @@ mod tests {
         );
         assert_eq!(data[data.len() - 1], 42);
     }
+
     #[tokio::test]
     async fn test_spud_builder_object_u16() {
         let builder: SpudBuilder = SpudBuilder::new();
@@ -186,6 +187,35 @@ mod tests {
             SpudTypes::Number(SpudNumberTypes::U64).as_u8()
         );
         assert_eq!(data[data.len() - 8..data.len()], [0, 0, 0, 0, 1, 0, 0, 0]);
+    }
+
+    #[tokio::test]
+    async fn test_spud_builder_object_u128() {
+        let builder: SpudBuilder = SpudBuilder::new();
+
+        builder
+            .object(async |obj: Arc<Mutex<SpudObject>>| {
+                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+
+                locked_object
+                    .add_value("u128", 18_446_744_073_709_551_616u128)
+                    .await?;
+
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().await;
+
+        assert_eq!(
+            data[data.len() - 17],
+            SpudTypes::Number(SpudNumberTypes::U128).as_u8()
+        );
+        assert_eq!(
+            data[data.len() - 16..data.len()],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+        );
     }
 
     #[tokio::test]
