@@ -22,6 +22,7 @@ rust_decimal = { version = "1.37.2", default-features = false, features = [
     "std",
 ] }
 serde_json = { version = "1.0.140", default-features = false, features = [
+    "arbitrary_precision",
     "std",
 ] }
 getrandom = { version = "0.3.3", default-features = false, features = ["std"] }

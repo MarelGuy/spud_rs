@@ -51,7 +51,7 @@ macro_rules! impl_spud_type_ext {
     };
 }
 
-impl_spud_primitive_writer_le!(u8, i8, i16, u16, i32, u32, f32, i64, u64, f64);
+impl_spud_primitive_writer_le!(u8, i8, i16, u16, i32, u32, f32, i64, u64, f64, i128, u128);
 
 impl_spud_type_ext! {
     i8, Number(SpudNumberTypes::I8), write_primitive_value,
@@ -64,6 +64,8 @@ impl_spud_type_ext! {
     i64, Number(SpudNumberTypes::I64), write_primitive_value,
     u64, Number(SpudNumberTypes::U64), write_primitive_value,
     f64, Number(SpudNumberTypes::F64), write_primitive_value,
+    i128, Number(SpudNumberTypes::I128), write_primitive_value,
+    u128, Number(SpudNumberTypes::U128), write_primitive_value,
 }
 
 impl_spud_type_ext! {

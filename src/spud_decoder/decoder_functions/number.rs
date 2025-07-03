@@ -37,6 +37,13 @@ pub(crate) fn number(
                 SpudError::DecodingError("Invalid U64 bytes".to_owned())
             })?))
         }
+        SpudNumberTypes::U128 => {
+            let read_bytes: &[u8] = decoder.read_bytes(16)?;
+
+            Number::from(u128::from_le_bytes(read_bytes.try_into().map_err(
+                |_| SpudError::DecodingError("Invalid U128 bytes".to_owned()),
+            )?))
+        }
         SpudNumberTypes::I8 => {
             let read_bytes: &[u8] = decoder.read_bytes(1)?;
 
@@ -64,6 +71,13 @@ pub(crate) fn number(
             Number::from(i64::from_le_bytes(read_bytes.try_into().map_err(|_| {
                 SpudError::DecodingError("Invalid I64 bytes".to_owned())
             })?))
+        }
+        SpudNumberTypes::I128 => {
+            let read_bytes: &[u8] = decoder.read_bytes(16)?;
+
+            Number::from(i128::from_le_bytes(read_bytes.try_into().map_err(
+                |_| SpudError::DecodingError("Invalid I128 bytes".to_owned()),
+            )?))
         }
         SpudNumberTypes::F32 => {
             let read_bytes: &[u8] = decoder.read_bytes(4)?;
