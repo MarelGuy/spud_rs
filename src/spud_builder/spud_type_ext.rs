@@ -107,27 +107,31 @@ fn write_datetime(value: DateTime, data: &mut Vec<u8>) {
     data.extend_from_slice(&value.as_le_bytes());
 }
 
+fn write_slice<T: SpudTypesExt>(slice: &[T], data: &mut Vec<u8>) {
+    data.push(SpudTypes::ArrayStart.as_u8());
+
+    for item in slice {
+        item.write_spud_bytes(data);
+    }
+
+    data.push(SpudTypes::ArrayEnd.as_u8());
+}
+
 impl<T: SpudTypesExt> SpudTypesExt for Vec<T> {
     fn write_spud_bytes(&self, data: &mut Vec<u8>) {
-        data.push(SpudTypes::ArrayStart.as_u8());
-
-        for item in self {
-            item.write_spud_bytes(data);
-        }
-
-        data.push(SpudTypes::ArrayEnd.as_u8());
+        write_slice(self, data);
     }
 }
 
 impl<T: SpudTypesExt> SpudTypesExt for &[T] {
     fn write_spud_bytes(&self, data: &mut Vec<u8>) {
-        data.push(SpudTypes::ArrayStart.as_u8());
+        write_slice(self, data);
+    }
+}
 
-        for item in *self {
-            item.write_spud_bytes(data);
-        }
-
-        data.push(SpudTypes::ArrayEnd.as_u8());
+impl<T: SpudTypesExt, const L: usize> SpudTypesExt for &[T; L] {
+    fn write_spud_bytes(&self, data: &mut Vec<u8>) {
+        write_slice(*self, data);
     }
 }
 

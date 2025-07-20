@@ -361,7 +361,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_spud_builder_object_array() {
+    async fn test_spud_builder_object_array_vec() {
         let builder: SpudBuilder = SpudBuilder::new();
 
         builder
@@ -371,6 +371,74 @@ mod tests {
                 locked_object
                     .add_value("array", vec![1u8, 2u8, 3u8])
                     .await?;
+
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().await;
+
+        assert_eq!(data[data.len() - 8], SpudTypes::ArrayStart.as_u8());
+        assert_eq!(
+            data[data.len() - 7..data.len() - 5],
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 1]
+        );
+        assert_eq!(
+            data[data.len() - 5..data.len() - 3],
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 2]
+        );
+        assert_eq!(
+            data[data.len() - 3..data.len() - 1],
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 3]
+        );
+        assert_eq!(data[data.len() - 1], SpudTypes::ArrayEnd.as_u8());
+    }
+
+    #[tokio::test]
+    async fn test_spud_builder_object_array_slice() {
+        let builder: SpudBuilder = SpudBuilder::new();
+
+        builder
+            .object(async |obj: Arc<Mutex<SpudObject>>| {
+                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+
+                locked_object.add_value("array", &[1u8, 2u8, 3u8]).await?;
+
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().await;
+
+        assert_eq!(data[data.len() - 8], SpudTypes::ArrayStart.as_u8());
+        assert_eq!(
+            data[data.len() - 7..data.len() - 5],
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 1]
+        );
+        assert_eq!(
+            data[data.len() - 5..data.len() - 3],
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 2]
+        );
+        assert_eq!(
+            data[data.len() - 3..data.len() - 1],
+            [SpudTypes::Number(SpudNumberTypes::U8).as_u8(), 3]
+        );
+        assert_eq!(data[data.len() - 1], SpudTypes::ArrayEnd.as_u8());
+    }
+
+    #[tokio::test]
+    async fn test_spud_builder_object_array_vec_slice() {
+        let builder: SpudBuilder = SpudBuilder::new();
+
+        builder
+            .object(async |obj: Arc<Mutex<SpudObject>>| {
+                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+
+                let vec: Vec<u8> = vec![1u8, 2u8, 3u8];
+
+                locked_object.add_value("array", vec.as_slice()).await?;
 
                 Ok(())
             })
@@ -482,5 +550,18 @@ mod tests {
                 .unwrap()
                 .as_le_bytes()
         );
+    }
+
+    #[tokio::test]
+    async fn test_debug_spud_builder() {
+        let builder: SpudBuilder = SpudBuilder::new();
+
+        let debug_str: String = format!("{builder:?}");
+
+        assert!(debug_str.contains("SpudBuilder"));
+        assert!(debug_str.contains("field_names"));
+        assert!(debug_str.contains("data"));
+        assert!(debug_str.contains("objects"));
+        assert!(debug_str.contains("seen_ids"));
     }
 }
