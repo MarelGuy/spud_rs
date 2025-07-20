@@ -2,10 +2,7 @@ use indexmap::IndexMap;
 
 use std::{fmt, future::Future, path::Path, sync::Arc};
 
-use tokio::{
-    runtime::Runtime,
-    sync::{Mutex, MutexGuard},
-};
+use tokio::sync::{Mutex, MutexGuard};
 
 use crate::{
     SpudError,
@@ -267,12 +264,9 @@ impl fmt::Debug for SpudBuilder {
 impl fmt::Debug for ObjectMap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut debug_map: fmt::DebugMap<'_, '_> = f.debug_map();
-        let rt: Runtime = Runtime::new().unwrap();
 
         for (key, value) in &self.0 {
-            rt.block_on(async {
-                debug_map.entry(&key, &value.lock().await);
-            });
+            debug_map.entry(&key, &value.try_lock());
         }
 
         debug_map.finish()
