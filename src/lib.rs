@@ -1,7 +1,7 @@
 #[cfg(all(not(feature = "async"), not(feature = "sync")))]
 compile_error!("You must enable either the 'async' or 'sync' feature (or both)!");
 
-pub const SPUD_VERSION: &str = "SPUD-0.7.0";
+pub const SPUD_VERSION: &str = "SPUD-0.8.0";
 
 pub mod types;
 
