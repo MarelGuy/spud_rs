@@ -11,6 +11,11 @@ mod spud_decoder;
 mod spud_error;
 mod spud_types;
 
+#[cfg(any(feature = "sync", feature = "async"))]
 pub use spud_builder::*;
+
+#[cfg(any(feature = "sync", feature = "async"))]
 pub use spud_decoder::SpudDecoder;
+
+#[cfg(any(feature = "sync", feature = "async"))]
 pub use spud_error::SpudError;
