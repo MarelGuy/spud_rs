@@ -10,15 +10,15 @@ use tokio::{
 
 use crate::{SPUD_VERSION, SpudError, spud_decoder::DecoderObject, spud_types::SpudTypes};
 
-/// The `SpudDecoder` is responsible for decoding SPUD files into a JSON format.
+/// The `SpudDecoderAsync` is responsible for decoding SPUD files into a JSON format.
 #[derive(Default, Debug, Clone)]
-pub struct SpudDecoder {
+pub struct SpudDecoderAsync {
     file_contents: Vec<u8>,
     field_names: IndexMap<u8, String>,
     output_json: String,
 }
 
-impl SpudDecoder {
+impl SpudDecoderAsync {
     /// # Errors
     ///
     /// Returns an error if the file is not a valid spud file
@@ -170,8 +170,8 @@ impl SpudDecoder {
     }
 }
 
-impl SpudDecoder {
-    /// Creates a new `SpudDecoder` instance from a file at the specified path.
+impl SpudDecoderAsync {
+    /// Creates a new `SpudDecoderAsync` instance from a file at the specified path.
     ///
     /// # Arguments
     ///

@@ -6,9 +6,9 @@ pub(crate) use decode_object::DecoderObject;
 #[cfg(feature = "async")]
 mod async_decoder;
 #[cfg(feature = "async")]
-pub use async_decoder::SpudDecoder;
+pub use async_decoder::SpudDecoderAsync;
 
-#[cfg(not(feature = "async"))]
+#[cfg(feature = "sync")]
 mod sync_decoder;
-#[cfg(not(feature = "async"))]
-pub use sync_decoder::SpudDecoder;
+#[cfg(feature = "sync")]
+pub use sync_decoder::SpudDecoderSync;

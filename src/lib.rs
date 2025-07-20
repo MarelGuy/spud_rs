@@ -23,7 +23,7 @@ mod spud_types;
 pub use spud_builder::*;
 
 #[cfg(any(feature = "sync", feature = "async"))]
-pub use spud_decoder::SpudDecoder;
+pub use spud_decoder::*;
 
 #[cfg(any(feature = "sync", feature = "async"))]
 pub use spud_error::SpudError;

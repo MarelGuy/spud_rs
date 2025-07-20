@@ -5,21 +5,21 @@ use indexmap::IndexMap;
 use serde_json::Value;
 
 use std::{
-    fs::{File as StdFile, read as std_read},
+    fs::{read as std_read, File as StdFile},
     io::Write,
 };
 
-use crate::{SPUD_VERSION, SpudError, spud_decoder::DecoderObject, spud_types::SpudTypes};
+use crate::{spud_decoder::DecoderObject, spud_types::SpudTypes, SpudError, SPUD_VERSION};
 
-/// The `SpudDecoder` is responsible for decoding SPUD files into a JSON format.
+/// The `SpudDecoderSync` is responsible for decoding SPUD files into a JSON format.
 #[derive(Default, Debug, Clone)]
-pub struct SpudDecoder {
+pub struct SpudDecoderSync {
     file_contents: Vec<u8>,
     field_names: IndexMap<u8, String>,
     output_json: String,
 }
 
-impl SpudDecoder {
+impl SpudDecoderSync {
     /// # Errors
     ///
     /// Returns an error if the file is not a valid spud file
@@ -171,8 +171,8 @@ impl SpudDecoder {
     }
 }
 
-impl SpudDecoder {
-    /// Creates a new `SpudDecoder` instance from a file at the specified path.
+impl SpudDecoderSync {
+    /// Creates a new `SpudDecoderSync` instance from a file at the specified path.
     ///
     /// # Arguments
     ///
