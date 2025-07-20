@@ -18,3 +18,5 @@ target/
 
 # Ignore the Cargo.lock file in libraries
 cargo.lock
+
+.vscode
