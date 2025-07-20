@@ -1,8 +1,8 @@
 mod builder;
 mod object;
 
-pub use builder::SpudBuilder;
-pub use object::SpudObject;
+pub use builder::SpudBuilderSync;
+pub use object::SpudObjectSync;
 
 #[cfg(all(test, not(feature = "async")))]
 mod tests {
@@ -11,14 +11,14 @@ mod tests {
     use std::sync::MutexGuard;
 
     use crate::{
-        SpudBuilder, SpudObject,
+        SpudBuilderSync, SpudObjectSync,
         spud_types::{SpudNumberTypes, SpudTypes},
         types::{BinaryBlob, SpudString},
     };
 
     #[test]
     fn test_spud_builder_new() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         assert!(builder.field_names.lock().unwrap().is_empty());
         assert!(builder.data.lock().unwrap().is_empty());
@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_empty() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder.object(|_| Ok(())).unwrap();
 
@@ -46,10 +46,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_null() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("null", ())?;
 
                 Ok(())
@@ -63,10 +63,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_bool() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("bool", true)?;
 
                 Ok(())
@@ -81,10 +81,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_u8() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("u8", 42u8)?;
 
                 Ok(())
@@ -102,10 +102,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_u16() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("u16", 256u16)?;
 
                 Ok(())
@@ -123,10 +123,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_u32() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("u32", 65536u32)?;
 
                 Ok(())
@@ -144,10 +144,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_u64() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("u64", 4_294_967_296u64)?;
 
                 Ok(())
@@ -165,10 +165,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_u128() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("u128", 18_446_744_073_709_551_616u128)?;
 
                 Ok(())
@@ -189,10 +189,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_f32() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("f32", 3.15f32)?;
 
                 Ok(())
@@ -214,10 +214,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_f64() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("f64", 3.15f64)?;
 
                 Ok(())
@@ -239,10 +239,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_decimal() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value(
                     "decimal",
                     rust_decimal::Decimal::from_f32_retain(1.0).unwrap(),
@@ -266,10 +266,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_string() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("string", SpudString::from("Hello, SPUD!"))?;
 
                 Ok(())
@@ -285,10 +285,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_binary_blob() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value(
                     "binary_blob",
                     BinaryBlob::new(&[0x01, 0x02, 0x03, 0x04, 0x05]),
@@ -310,10 +310,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_array_vec() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("array", vec![1u8, 2u8, 3u8])?;
 
                 Ok(())
@@ -340,10 +340,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_array_slice() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("array", &[1u8, 2u8, 3u8])?;
 
                 Ok(())
@@ -370,10 +370,10 @@ mod tests {
 
     #[test]
     fn test_spud_builder_object_array_vec_slice() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 let vec: Vec<u8> = vec![1u8, 2u8, 3u8];
 
                 obj.add_value("array", vec.as_slice())?;
@@ -404,10 +404,10 @@ mod tests {
     fn test_spud_builder_object_date() {
         use crate::types::Date;
 
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("date", Date::from_str("2023-10-01").unwrap())?;
 
                 Ok(())
@@ -427,10 +427,10 @@ mod tests {
     fn test_spud_builder_object_time() {
         use crate::types::Time;
 
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("time", Time::from_str("12:34:56.7890").unwrap())?;
 
                 Ok(())
@@ -450,10 +450,10 @@ mod tests {
     fn test_spud_builder_object_datetime() {
         use crate::types::DateTime;
 
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value(
                     "datetime",
                     DateTime::from_str("2023-10-01 12:34:56.7890").unwrap(),
@@ -476,10 +476,10 @@ mod tests {
 
     #[test]
     fn test_debug_spud_builder() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
 
         builder
-            .object(|obj: &SpudObject| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("test", SpudString::from("value"))?;
 
                 Ok(())
@@ -488,7 +488,7 @@ mod tests {
 
         let debug_str: String = format!("{builder:?}");
 
-        assert!(debug_str.contains("SpudBuilder"));
+        assert!(debug_str.contains("SpudBuilderSync"));
         assert!(debug_str.contains("field_names"));
         assert!(debug_str.contains("data"));
         assert!(debug_str.contains("objects"));

@@ -1,12 +1,8 @@
 use crate::SpudError;
 
-#[cfg(not(feature = "async"))]
-type VecBool = Vec<bool>;
-
-#[cfg(feature = "async")]
 type VecBool<'a> = tokio::sync::MutexGuard<'a, Vec<bool>>;
 
-pub(crate) fn generate_u8_id(id_vec: &mut VecBool) -> Result<u8, SpudError> {
+pub(crate) fn generate_u8_id_async(id_vec: &mut VecBool) -> Result<u8, SpudError> {
     let mut id: [u8; 1] = [0_u8; 1];
 
     getrandom::fill(&mut id)?;
@@ -14,7 +10,7 @@ pub(crate) fn generate_u8_id(id_vec: &mut VecBool) -> Result<u8, SpudError> {
     let id: u8 = id[0];
 
     if id_vec[id as usize] {
-        return generate_u8_id(id_vec);
+        return generate_u8_id_async(id_vec);
     }
 
     id_vec[id as usize] = true;
@@ -24,7 +20,6 @@ pub(crate) fn generate_u8_id(id_vec: &mut VecBool) -> Result<u8, SpudError> {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "async")]
     use tokio::sync::Mutex;
 
     use super::*;
@@ -39,7 +34,7 @@ mod tests {
         #[cfg(feature = "async")]
         let mut id_tracker = binding.try_lock().unwrap();
 
-        let result: Result<u8, SpudError> = generate_u8_id(&mut id_tracker);
+        let result: Result<u8, SpudError> = generate_u8_id_async(&mut id_tracker);
 
         assert!(result.is_ok(), "Function should return a valid ID");
         let generated_id = result.unwrap();

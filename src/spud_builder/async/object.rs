@@ -6,7 +6,7 @@ use std::{pin::Pin, sync::Arc};
 use tokio::sync::{Mutex, MutexGuard};
 
 use crate::{
-    SpudError, functions::generate_u8_id, spud_builder::spud_type_ext::SpudTypesExt,
+    SpudError, functions::generate_u8_id_async, spud_builder::spud_type_ext::SpudTypesExt,
     spud_types::SpudTypes, types::ObjectId,
 };
 
@@ -15,7 +15,7 @@ use super::builder::ObjectMap;
 /// Represents a SPUD object, which is a collection of fields and values.
 /// It allows adding values to fields and manages the internal data structure for SPUD encoding.
 #[derive(Debug)]
-pub struct SpudObject {
+pub struct SpudObjectAsync {
     pub(crate) _oid: ObjectId,
     data: Arc<Mutex<Vec<u8>>>,
     field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
@@ -23,13 +23,13 @@ pub struct SpudObject {
     objects: Arc<Mutex<ObjectMap>>,
 }
 
-impl SpudObject {
+impl SpudObjectAsync {
     pub(crate) async fn new(
         field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
         seen_ids: Arc<Mutex<Vec<bool>>>,
         objects: Arc<Mutex<ObjectMap>>,
         data: Arc<Mutex<Vec<u8>>>,
-    ) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
+    ) -> Result<Arc<Mutex<SpudObjectAsync>>, SpudError> {
         data.lock().await.extend_from_slice(&[
             SpudTypes::ObjectStart.as_u8(),
             SpudTypes::ObjectStart.as_u8(),
@@ -37,7 +37,7 @@ impl SpudObject {
 
         let oid: ObjectId = Self::generate_oid(&mut data.lock().await)?;
 
-        let object: Arc<Mutex<SpudObject>> = Arc::new(Mutex::new(Self {
+        let object: Arc<Mutex<SpudObjectAsync>> = Arc::new(Mutex::new(Self {
             _oid: oid,
             data,
             field_names,
@@ -60,13 +60,13 @@ impl SpudObject {
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::{SpudBuilder, SpudObject};
+    /// use spud_rs::{SpudBuilder, SpudObjectAsync};
     /// use tokio::sync::MutexGuard;
     ///
     /// let builder = SpudBuilder::new();
     ///
     /// builder.object(async |obj| {
-    ///     let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///     let locked_obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
     ///
     ///     locked_obj.add_value("field_name", 42u8).await?;
     ///
@@ -76,7 +76,7 @@ impl SpudObject {
     ///
     /// # Returns
     ///
-    /// A mutable reference to the `SpudObject`, allowing for method chaining.
+    /// A mutable reference to the `SpudObjectAsync`, allowing for method chaining.
     ///
     /// # Errors
     ///
@@ -97,7 +97,7 @@ impl SpudObject {
         Ok(self)
     }
 
-    /// Creates a new `SpudObject` instance associated with this Object.
+    /// Creates a new `SpudObjectAsync` instance associated with this Object.
     ///
     /// # Arguments
     ///
@@ -112,21 +112,21 @@ impl SpudObject {
     /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
     pub async fn object<F>(&self, field_name: &str, f: F) -> Result<(), SpudError>
     where
-        F: FnOnce(&SpudObject) -> Result<(), SpudError>,
+        F: FnOnce(&SpudObjectAsync) -> Result<(), SpudError>,
     {
         self.add_field_name(field_name).await?;
 
-        let obj: Arc<Mutex<SpudObject>> = self.new_object().await?;
+        let obj: Arc<Mutex<SpudObjectAsync>> = self.new_object().await?;
 
-        let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+        let locked_obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
         f(&locked_obj)?;
 
         Ok(())
     }
 
-    async fn new_object(&self) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
-        SpudObject::new(
+    async fn new_object(&self) -> Result<Arc<Mutex<SpudObjectAsync>>, SpudError> {
+        SpudObjectAsync::new(
             Arc::clone(&self.field_names),
             Arc::clone(&self.seen_ids),
             Arc::clone(&self.objects),
@@ -145,7 +145,7 @@ impl SpudObject {
             data.push(SpudTypes::ObjectEnd.as_u8());
 
             let objects: MutexGuard<'_, ObjectMap> = self.objects.lock().await;
-            let objects: Values<'_, ObjectId, Arc<Mutex<SpudObject>>> = objects.0.values();
+            let objects: Values<'_, ObjectId, Arc<Mutex<SpudObjectAsync>>> = objects.0.values();
 
             drop(data);
 
@@ -163,7 +163,7 @@ impl SpudObject {
         let id: u8 = if let Some(value) = self.field_names.lock().await.get(&key) {
             *value
         } else {
-            let id: u8 = generate_u8_id(&mut self.seen_ids.lock().await)?;
+            let id: u8 = generate_u8_id_async(&mut self.seen_ids.lock().await)?;
 
             self.field_names.lock().await.insert(key, id);
             id

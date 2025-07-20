@@ -3,9 +3,9 @@ mod r#async;
 #[cfg(feature = "async")]
 pub use r#async::*;
 
-#[cfg(not(feature = "async"))]
+#[cfg(feature = "sync")]
 mod sync;
-#[cfg(not(feature = "async"))]
+#[cfg(feature = "sync")]
 pub use sync::*;
 
 mod spud_type_ext;

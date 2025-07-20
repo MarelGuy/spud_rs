@@ -5,16 +5,16 @@ use std::sync::Mutex;
 
 use crate::{
     SpudError,
-    functions::{check_path, initialise_header},
+    functions::{check_path, initialise_header_sync},
     types::ObjectId,
 };
 
 use std::fs;
 
-use super::SpudObject;
+use super::SpudObjectSync;
 
 #[derive(Default, Clone)]
-pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>>);
+pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObjectSync>>>);
 
 /// Represents a builder for creating SPUD objects.
 ///
@@ -22,35 +22,35 @@ pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>
 ///
 /// # Example
 /// ```rust
-/// use spud_rs::SpudBuilder;
+/// use spud_rs::SpudBuilderSync;
 /// ```
 ///
 /// # Notes
 ///
 /// This builder is designed to be used in a synchronous context. There is an asynchronous version available if the `async` feature is enabled.
 #[derive(Default, Clone)]
-pub struct SpudBuilder {
+pub struct SpudBuilderSync {
     pub(crate) field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
     pub(crate) data: Arc<Mutex<Vec<u8>>>,
     pub(crate) objects: Arc<Mutex<ObjectMap>>,
     pub(crate) seen_ids: Arc<Mutex<Vec<bool>>>,
 }
 
-impl SpudBuilder {
+impl SpudBuilderSync {
     #[must_use]
-    /// Creates a new `SpudBuilder` instance.
+    /// Creates a new `SpudBuilderSync` instance.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::SpudBuilder;
+    /// use spud_rs::SpudBuilderSync;
     ///
-    /// let builder = SpudBuilder::new();
+    /// let builder = SpudBuilderSync::new();
     /// ```
     ///
     /// # Returns
     ///
-    /// A new instance of `SpudBuilder`.
+    /// A new instance of `SpudBuilderSync`.
     pub fn new() -> Self {
         let mut seen_ids: Vec<bool> = vec![false; 256];
 
@@ -65,18 +65,18 @@ impl SpudBuilder {
         }
     }
 
-    /// Creates a new `SpudObject` instance associated with this builder.
+    /// Creates a new `SpudObjectSync` instance associated with this builder.
     ///
     /// # Arguments
     ///
-    /// * `f` - A closure that takes a reference to the `SpudObject` and returns a `Result<(), SpudError>`.
+    /// * `f` - A closure that takes a reference to the `SpudObjectSync` and returns a `Result<(), SpudError>`.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::SpudBuilder;
+    /// use spud_rs::SpudBuilderSync;
     ///
-    /// let builder = SpudBuilder::new();
+    /// let builder = SpudBuilderSync::new();
     ///
     /// builder.object(|obj| {
     ///     Ok(())
@@ -85,28 +85,32 @@ impl SpudBuilder {
     ///
     /// # Returns
     ///
-    /// A new instance of `SpudObject` that is linked to the builder's field names, seen IDs, and objects.
+    /// A new instance of `SpudObjectSync` that is linked to the builder's field names, seen IDs, and objects.
     ///
     /// # Errors
     ///
     /// Returns an error if the object cannot be created, typically due to internal issues with the builder's state.
     ///
+    /// # Panics
+    ///
+    /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
+    ///
     /// # Note
     ///
-    /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder.
+    /// The `SpudObjectSync` created by this method will share the same field names, seen IDs, and objects as the builder.
     pub fn object<F>(&self, f: F) -> Result<(), SpudError>
     where
-        F: FnOnce(&SpudObject) -> Result<(), SpudError>,
+        F: FnOnce(&SpudObjectSync) -> Result<(), SpudError>,
     {
-        let obj: Arc<Mutex<SpudObject>> = self.new_object()?;
+        let obj: Arc<Mutex<SpudObjectSync>> = self.new_object()?;
 
         f(&obj.lock().unwrap())?;
 
         Ok(())
     }
 
-    fn new_object(&self) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
-        SpudObject::new(
+    fn new_object(&self) -> Result<Arc<Mutex<SpudObjectSync>>, SpudError> {
+        SpudObjectSync::new(
             Arc::clone(&self.field_names),
             Arc::clone(&self.seen_ids),
             Arc::clone(&self.objects),
@@ -119,9 +123,9 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::SpudBuilder;
+    /// use spud_rs::SpudBuilderSync;
     ///
-    /// let builder = SpudBuilder::new();
+    /// let builder = SpudBuilderSync::new();
     ///
     /// builder.object(|obj| {
     ///     Ok(())
@@ -168,7 +172,7 @@ impl SpudBuilder {
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> = initialise_header(
+        let header: Vec<u8> = initialise_header_sync(
             &self.field_names.lock().unwrap(),
             &self.data.lock().unwrap(),
         );
@@ -179,9 +183,9 @@ impl SpudBuilder {
     }
 }
 
-impl fmt::Debug for SpudBuilder {
+impl fmt::Debug for SpudBuilderSync {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut debug_builder: fmt::DebugStruct<'_, '_> = f.debug_struct("SpudBuilder");
+        let mut debug_builder: fmt::DebugStruct<'_, '_> = f.debug_struct("SpudBuilderSync");
 
         debug_builder.field("field_names", &self.field_names.lock().unwrap());
         debug_builder.field("data", &self.data.lock().unwrap());

@@ -6,16 +6,16 @@ use tokio::sync::{Mutex, MutexGuard};
 
 use crate::{
     SpudError,
-    functions::{check_path, initialise_header},
+    functions::{check_path, initialise_header_async},
     types::ObjectId,
 };
 
 use tokio::fs::write;
 
-use super::SpudObject;
+use super::SpudObjectAsync;
 
 #[derive(Default, Clone)]
-pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>>);
+pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObjectAsync>>>);
 
 #[derive(Default, Clone)]
 /// Represents a builder for creating SPUD objects.
@@ -24,30 +24,30 @@ pub(crate) struct ObjectMap(pub(crate) IndexMap<ObjectId, Arc<Mutex<SpudObject>>
 ///
 /// # Example
 /// ```rust
-/// use spud_rs::SpudBuilder;
+/// use spud_rs::SpudBuilderAsync;
 /// ```
-pub struct SpudBuilder {
+pub struct SpudBuilderAsync {
     pub(crate) field_names: Arc<Mutex<IndexMap<(String, u8), u8>>>,
     pub(crate) data: Arc<Mutex<Vec<u8>>>,
     pub(crate) objects: Arc<Mutex<ObjectMap>>,
     pub(crate) seen_ids: Arc<Mutex<Vec<bool>>>,
 }
 
-impl SpudBuilder {
+impl SpudBuilderAsync {
     #[must_use]
-    /// Creates a new `SpudBuilder` instance.
+    /// Creates a new `SpudBuilderAsync` instance.
     ///
     /// # Examples
     /// ```rust
-    /// use spud_rs::SpudBuilder;
+    /// use spud_rs::SpudBuilderAsync;
     ///
-    /// let builder = SpudBuilder::new();
+    /// let builder = SpudBuilderAsync::new();
     ///
     /// ```
     ///
     /// # Returns
     ///
-    /// A new instance of `SpudBuilder`.
+    /// A new instance of `SpudBuilderAsync`.
     pub fn new() -> Self {
         let mut seen_ids: Vec<bool> = vec![false; 256];
 
@@ -62,23 +62,23 @@ impl SpudBuilder {
         }
     }
 
-    /// Creates a new `SpudObject` instance associated with this builder.
+    /// Creates a new `SpudObjectAsync` instance associated with this builder.
     ///
     /// # Arguments
     ///
-    /// * `f` - A closure that takes a reference to the `SpudObject` and returns a `Result<(), SpudError>`.
+    /// * `f` - A closure that takes a reference to the `SpudObjectAsync` and returns a `Result<(), SpudError>`.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::{SpudBuilder, SpudObject};
+    /// use spud_rs::{SpudBuilderAsync, SpudObjectAsync};
     /// use tokio::sync::MutexGuard;
     ///
     /// async fn foo() -> Result<(), spud_rs::SpudError> {
-    ///     let builder = SpudBuilder::new();
+    ///     let builder = SpudBuilderAsync::new();
     ///
     ///     builder.object(async |obj| {
-    ///         let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///         let locked_obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
     ///
     ///         Ok(())
     ///        }).await?;
@@ -89,7 +89,7 @@ impl SpudBuilder {
     ///
     /// # Returns
     ///
-    /// A new instance of `SpudObject` that is linked to the builder's field names, seen IDs, and objects.
+    /// A new instance of `SpudObjectAsync` that is linked to the builder's field names, seen IDs, and objects.
     ///
     /// # Errors
     ///
@@ -97,21 +97,21 @@ impl SpudBuilder {
     ///
     /// # Note
     ///
-    /// The `SpudObject` created by this method will share the same field names, seen IDs, and objects as the builder.
+    /// The `SpudObjectAsync` created by this method will share the same field names, seen IDs, and objects as the builder.
     pub async fn object<F, Fut>(&self, f: F) -> Result<(), SpudError>
     where
-        F: FnOnce(Arc<Mutex<SpudObject>>) -> Fut,
+        F: FnOnce(Arc<Mutex<SpudObjectAsync>>) -> Fut,
         Fut: Future<Output = Result<(), SpudError>>,
     {
-        let obj: Arc<Mutex<SpudObject>> = self.new_object().await?;
+        let obj: Arc<Mutex<SpudObjectAsync>> = self.new_object().await?;
 
         f(obj).await?;
 
         Ok(())
     }
 
-    async fn new_object(&self) -> Result<Arc<Mutex<SpudObject>>, SpudError> {
-        SpudObject::new(
+    async fn new_object(&self) -> Result<Arc<Mutex<SpudObjectAsync>>, SpudError> {
+        SpudObjectAsync::new(
             Arc::clone(&self.field_names),
             Arc::clone(&self.seen_ids),
             Arc::clone(&self.objects),
@@ -125,14 +125,14 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::{SpudBuilder, SpudObject};
+    /// use spud_rs::{SpudBuilderAsync, SpudObjectAsync};
     /// use tokio::sync::MutexGuard;
     ///
     /// async fn foo() -> Result<(), spud_rs::SpudError> {
-    ///     let builder = SpudBuilder::new();
+    ///     let builder = SpudBuilderAsync::new();
     ///
     ///     builder.object(async |obj| {
-    ///         let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///         let locked_obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
     ///
     ///         locked_obj.add_value("field_name", 42u8).await?;
     ///
@@ -169,14 +169,14 @@ impl SpudBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use spud_rs::{SpudBuilder, SpudObject};
+    /// use spud_rs::{SpudBuilderAsync, SpudObjectAsync};
     /// use tokio::sync::MutexGuard;
     ///
     /// async fn foo() -> Result<(), spud_rs::SpudError> {
-    ///     let mut builder = SpudBuilder::new();
+    ///     let mut builder = SpudBuilderAsync::new();
     ///
     ///     builder.object(async |obj| {
-    ///         let locked_obj: MutexGuard<'_, SpudObject> = obj.lock().await;
+    ///         let locked_obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
     ///
     ///         locked_obj.add_value("val", 1u8).await?;
     ///
@@ -204,7 +204,7 @@ impl SpudBuilder {
         let path: &Path = Path::new(&path_str);
 
         let header: Vec<u8> =
-            initialise_header(&self.field_names.lock().await, &self.data.lock().await);
+            initialise_header_async(&self.field_names.lock().await, &self.data.lock().await);
 
         write(path, header).await?;
 
@@ -212,9 +212,9 @@ impl SpudBuilder {
     }
 }
 
-impl fmt::Debug for SpudBuilder {
+impl fmt::Debug for SpudBuilderAsync {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut debug_builder: fmt::DebugStruct<'_, '_> = f.debug_struct("SpudBuilder");
+        let mut debug_builder: fmt::DebugStruct<'_, '_> = f.debug_struct("SpudBuilderAsync");
 
         let field_names: MutexGuard<'_, IndexMap<(String, u8), u8>> =
             if let Ok(guard) = self.field_names.try_lock() {

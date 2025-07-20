@@ -1,8 +1,8 @@
 mod builder;
 mod object;
 
-pub use builder::SpudBuilder;
-pub use object::SpudObject;
+pub use builder::SpudBuilderAsync;
+pub use object::SpudObjectAsync;
 
 #[cfg(all(test, feature = "async"))]
 mod tests {
@@ -12,14 +12,14 @@ mod tests {
     use tokio::sync::{Mutex, MutexGuard};
 
     use crate::{
-        SpudBuilder, SpudObject,
+        SpudBuilderAsync, SpudObjectAsync,
         spud_types::{SpudNumberTypes, SpudTypes},
         types::{BinaryBlob, SpudString},
     };
 
     #[tokio::test]
     async fn test_spud_builder_new() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         assert!(builder.field_names.lock().await.is_empty());
         assert!(builder.data.lock().await.is_empty());
@@ -30,11 +30,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_empty() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let _: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let _: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 Ok(())
             })
@@ -54,11 +54,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_null() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("null", ()).await?;
 
@@ -74,11 +74,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_bool() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("bool", true).await?;
 
@@ -95,11 +95,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_u8() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("u8", 42u8).await?;
 
@@ -119,11 +119,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_u16() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("u16", 256u16).await?;
 
@@ -143,11 +143,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_u32() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("u32", 65536u32).await?;
 
@@ -167,11 +167,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_u64() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("u64", 4_294_967_296u64).await?;
 
@@ -191,11 +191,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_u128() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value("u128", 18_446_744_073_709_551_616u128)
@@ -220,11 +220,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_f32() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("f32", 3.15f32).await?;
 
@@ -248,11 +248,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_f64() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("f64", 3.15f64).await?;
 
@@ -276,11 +276,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_decimal() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value(
@@ -308,11 +308,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_string() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value("string", SpudString::from("Hello, SPUD!"))
@@ -332,11 +332,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_binary_blob() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value(
@@ -362,11 +362,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_array_vec() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value("array", vec![1u8, 2u8, 3u8])
@@ -397,11 +397,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_array_slice() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object.add_value("array", &[1u8, 2u8, 3u8]).await?;
 
@@ -430,11 +430,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_spud_builder_object_array_vec_slice() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 let vec: Vec<u8> = vec![1u8, 2u8, 3u8];
 
@@ -467,11 +467,11 @@ mod tests {
     async fn test_spud_builder_object_date() {
         use crate::types::Date;
 
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value("date", Date::from_str("2023-10-01").unwrap())
@@ -495,11 +495,11 @@ mod tests {
     async fn test_spud_builder_object_time() {
         use crate::types::Time;
 
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value("time", Time::from_str("12:34:56.7890").unwrap())
@@ -523,11 +523,11 @@ mod tests {
     async fn test_spud_builder_object_datetime() {
         use crate::types::DateTime;
 
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value(
@@ -554,11 +554,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_debug_spud_builder() {
-        let builder: SpudBuilder = SpudBuilder::new();
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         builder
-            .object(async |obj: Arc<Mutex<SpudObject>>| {
-                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
                 locked_object
                     .add_value("test", SpudString::from("value"))
@@ -571,7 +571,7 @@ mod tests {
 
         let debug_str: String = format!("{builder:?}");
 
-        assert!(debug_str.contains("SpudBuilder"));
+        assert!(debug_str.contains("SpudBuilderAsync"));
         assert!(debug_str.contains("field_names"));
         assert!(debug_str.contains("data"));
         assert!(debug_str.contains("objects"));
