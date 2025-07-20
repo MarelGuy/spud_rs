@@ -13,5 +13,8 @@ pub(crate) use r#async::*;
 #[cfg(feature = "sync")]
 pub(crate) use sync::*;
 
+#[cfg(any(feature = "sync", feature = "async"))]
 pub(crate) use add_value_len::add_value_length;
+
+#[cfg(any(feature = "sync", feature = "async"))]
 pub(crate) use check_path::check_path;

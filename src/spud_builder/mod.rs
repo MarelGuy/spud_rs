@@ -8,4 +8,5 @@ mod sync;
 #[cfg(feature = "sync")]
 pub use sync::*;
 
+#[cfg(any(feature = "sync", feature = "async"))]
 mod spud_type_ext;
