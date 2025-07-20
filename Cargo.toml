@@ -2,7 +2,7 @@
 edition = "2024"
 authors = ["Loris Cuntreri <irertnuc.loris@gmail.com>"]
 name = "spud_rs"
-version = "0.8.0"
+version = "0.8.1"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/MarelGuy/spud_rs"
 readme = "README.md"

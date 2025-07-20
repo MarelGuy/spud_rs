@@ -2,7 +2,7 @@
 compile_error!("You must enable either the 'async' or 'sync' feature (or both)!");
 
 #[cfg(any(feature = "sync", feature = "async"))]
-pub const SPUD_VERSION: &str = "SPUD-0.8.0";
+pub const SPUD_VERSION: &str = "SPUD-0.8.1";
 
 #[cfg(any(feature = "sync", feature = "async"))]
 pub mod types;
