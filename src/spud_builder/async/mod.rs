@@ -556,6 +556,19 @@ mod tests {
     async fn test_debug_spud_builder() {
         let builder: SpudBuilder = SpudBuilder::new();
 
+        builder
+            .object(async |obj: Arc<Mutex<SpudObject>>| {
+                let locked_object: MutexGuard<'_, SpudObject> = obj.lock().await;
+
+                locked_object
+                    .add_value("test", SpudString::from("value"))
+                    .await?;
+
+                Ok(())
+            })
+            .await
+            .unwrap();
+
         let debug_str: String = format!("{builder:?}");
 
         assert!(debug_str.contains("SpudBuilder"));

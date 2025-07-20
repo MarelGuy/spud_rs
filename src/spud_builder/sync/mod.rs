@@ -478,6 +478,14 @@ mod tests {
     fn test_debug_spud_builder() {
         let builder: SpudBuilder = SpudBuilder::new();
 
+        builder
+            .object(|obj: &SpudObject| {
+                obj.add_value("test", SpudString::from("value"))?;
+
+                Ok(())
+            })
+            .unwrap();
+
         let debug_str: String = format!("{builder:?}");
 
         assert!(debug_str.contains("SpudBuilder"));
