@@ -21,14 +21,14 @@ indexmap = { version = "2.10.0", default-features = false, features = [
 rust_decimal = { version = "1.37.2", default-features = false, features = [
     "std",
 ] }
-serde_json = { version = "1.0.140", default-features = false, features = [
+serde_json = { version = "1.0.141", default-features = false, features = [
     "arbitrary_precision",
     "std",
 ] }
 getrandom = { version = "0.3.3", default-features = false, features = ["std"] }
 bs58 = { version = "0.5.1", default-features = false, features = ["std"] }
 
-tokio = { version = "1.46.0", default-features = false, features = [
+tokio = { version = "1.46.1", default-features = false, features = [
     "rt-multi-thread",
     "fs",
     "io-util",
@@ -38,7 +38,7 @@ tokio = { version = "1.46.0", default-features = false, features = [
 # serde = { version = "1.0.219", features = ["derive"], optional = true }
 
 [dev-dependencies]
-tokio = { version = "1.46.0", default-features = false, features = [
+tokio = { version = "1.46.1", default-features = false, features = [
     "rt-multi-thread",
     "fs",
     "io-util",
