@@ -294,4 +294,16 @@ mod tests {
         assert!("12:30:45.1000000000".parse::<Time>().is_err());
         assert!("12:30".parse::<Time>().is_err());
     }
+
+    #[test]
+    fn test_time_as_le_bytes() {
+        let time: Time = Time::new(12, 30, 45, 500_000_000).unwrap();
+        let bytes: Vec<u8> = time.as_le_bytes();
+
+        assert_eq!(bytes.len(), 1 + 1 + 1 + 4);
+        assert_eq!(bytes[0], 12);
+        assert_eq!(bytes[1], 30);
+        assert_eq!(bytes[2], 45);
+        assert_eq!(&bytes[3..], &500_000_000u32.to_le_bytes());
+    }
 }

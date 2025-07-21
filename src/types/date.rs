@@ -224,4 +224,15 @@ mod tests {
         assert!(naive_date.is_ok());
         assert_eq!(naive_date.unwrap().to_string(), "2023-03-15");
     }
+
+    #[test]
+    fn test_date_to_le_bytes() {
+        let date: Date = Date::new(2023, 3, 15).unwrap();
+        let bytes: Vec<u8> = date.as_le_bytes();
+
+        assert_eq!(bytes.len(), 4);
+        assert_eq!(bytes[0..2], [0xe7, 0x07]); // 2023 in little-endian
+        assert_eq!(bytes[2], 3); // March
+        assert_eq!(bytes[3], 15); // 15th day
+    }
 }

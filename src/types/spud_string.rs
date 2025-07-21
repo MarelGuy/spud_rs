@@ -155,4 +155,11 @@ mod tests {
         assert!(!spud_string.is_empty());
         assert!(!spud_string.as_bytes().is_empty());
     }
+
+    #[test]
+    fn test_spud_string_len() {
+        let s: SpudString = SpudString::from("Hello, world!");
+
+        assert_eq!(s.len(), 13); // "Hello, world!" is 13 bytes long
+    }
 }

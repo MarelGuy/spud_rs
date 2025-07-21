@@ -171,4 +171,27 @@ mod tests {
             "2023-03-15 12:30:45.500"
         );
     }
+
+    #[test]
+    fn test_datetime_display() {
+        let date: Date = Date::new(2023, 3, 15).unwrap();
+        let time: Time = Time::new(12, 30, 45, 500_000_000).unwrap();
+
+        let datetime = DateTime::new(date, time);
+
+        assert_eq!(datetime.to_string(), "2023-03-15 12:30:45.500000000");
+    }
+
+    #[test]
+    fn test_datetime_to_le_bytes() {
+        let date: Date = Date::new(2023, 3, 15).unwrap();
+        let time: Time = Time::new(12, 30, 45, 500_000_000).unwrap();
+
+        let datetime = DateTime::new(date, time);
+        let bytes = datetime.as_le_bytes();
+
+        assert_eq!(bytes.len(), 11);
+        assert_eq!(&bytes[0..4], date.as_le_bytes());
+        assert_eq!(&bytes[4..11], time.as_le_bytes());
+    }
 }
