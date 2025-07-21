@@ -111,6 +111,9 @@ impl SpudObjectSync {
 
         f(&obj.lock().unwrap())?;
 
+        self.data.lock().unwrap().push(SpudTypes::ObjectEnd.as_u8());
+        self.data.lock().unwrap().push(SpudTypes::ObjectEnd.as_u8());
+
         Ok(())
     }
 
@@ -124,15 +127,8 @@ impl SpudObjectSync {
     }
 
     pub(crate) fn encode(&self) -> Result<(), SpudError> {
-        let mut data: MutexGuard<'_, Vec<u8>> = self.data.lock().unwrap();
-
-        data.push(SpudTypes::ObjectEnd.as_u8());
-        data.push(SpudTypes::ObjectEnd.as_u8());
-
         let objects: MutexGuard<'_, ObjectMap> = self.objects.lock().unwrap();
         let objects: Values<'_, ObjectId, Arc<Mutex<SpudObjectSync>>> = objects.0.values();
-
-        drop(data);
 
         for object in objects {
             object.lock().unwrap().encode()?;

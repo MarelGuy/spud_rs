@@ -33,7 +33,11 @@ mod tests {
 
         builder.object(|_| Ok(())).unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[0..2],
@@ -56,7 +60,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 1], SpudTypes::Null.as_u8());
     }
@@ -73,7 +81,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 2], SpudTypes::Bool.as_u8());
         assert_eq!(data[data.len() - 1], 1);
@@ -91,7 +103,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 2],
@@ -112,7 +128,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 3],
@@ -133,7 +153,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 5],
@@ -154,7 +178,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 9],
@@ -175,7 +203,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 17],
@@ -199,7 +231,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 2],
@@ -220,7 +256,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 3],
@@ -241,7 +281,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 5],
@@ -262,7 +306,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 9],
@@ -289,7 +337,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 17],
@@ -316,7 +368,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 5],
@@ -341,7 +397,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(
             data[data.len() - 9],
@@ -369,7 +429,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 17], SpudTypes::Decimal.as_u8());
 
@@ -393,7 +457,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 15], SpudTypes::String.as_u8());
         assert_eq!(data[data.len() - 13], 12);
@@ -415,7 +483,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 8], SpudTypes::BinaryBlob.as_u8());
         assert_eq!(data[data.len() - 6], 5);
@@ -437,7 +509,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 8], SpudTypes::ArrayStart.as_u8());
         assert_eq!(
@@ -467,7 +543,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 8], SpudTypes::ArrayStart.as_u8());
         assert_eq!(
@@ -499,7 +579,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 8], SpudTypes::ArrayStart.as_u8());
         assert_eq!(
@@ -531,7 +615,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 5], SpudTypes::Date.as_u8());
         assert_eq!(
@@ -554,7 +642,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 8], SpudTypes::Time.as_u8());
         assert_eq!(
@@ -580,7 +672,11 @@ mod tests {
             })
             .unwrap();
 
-        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+        let mut data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        let new_len: usize = data.len().saturating_sub(2);
+
+        data.truncate(new_len);
 
         assert_eq!(data[data.len() - 12], SpudTypes::DateTime.as_u8());
         assert_eq!(

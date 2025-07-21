@@ -7,6 +7,7 @@ use tokio::sync::{Mutex, MutexGuard};
 use crate::{
     SpudError,
     functions::{check_path, initialise_header_async},
+    spud_types::SpudTypes,
     types::ObjectId,
 };
 
@@ -106,6 +107,9 @@ impl SpudBuilderAsync {
         let obj: Arc<Mutex<SpudObjectAsync>> = self.new_object().await?;
 
         f(obj).await?;
+
+        self.data.lock().await.push(SpudTypes::ObjectEnd.as_u8());
+        self.data.lock().await.push(SpudTypes::ObjectEnd.as_u8());
 
         Ok(())
     }

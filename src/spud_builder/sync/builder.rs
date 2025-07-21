@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use crate::{
     SpudError,
     functions::{check_path, initialise_header_sync},
+    spud_types::SpudTypes,
     types::ObjectId,
 };
 
@@ -105,6 +106,9 @@ impl SpudBuilderSync {
         let obj: Arc<Mutex<SpudObjectSync>> = self.new_object()?;
 
         f(&obj.lock().unwrap())?;
+
+        self.data.lock().unwrap().push(SpudTypes::ObjectEnd.as_u8());
+        self.data.lock().unwrap().push(SpudTypes::ObjectEnd.as_u8());
 
         Ok(())
     }

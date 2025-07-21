@@ -121,6 +121,9 @@ impl SpudObjectAsync {
 
         f(obj).await?;
 
+        self.data.lock().await.push(SpudTypes::ObjectEnd.as_u8());
+        self.data.lock().await.push(SpudTypes::ObjectEnd.as_u8());
+
         Ok(())
     }
 
@@ -138,15 +141,8 @@ impl SpudObjectAsync {
         &'a self,
     ) -> Pin<Box<dyn Future<Output = Result<(), SpudError>> + Send + 'a>> {
         Box::pin(async move {
-            let mut data: MutexGuard<'_, Vec<u8>> = self.data.lock().await;
-
-            data.push(SpudTypes::ObjectEnd.as_u8());
-            data.push(SpudTypes::ObjectEnd.as_u8());
-
             let objects: MutexGuard<'_, ObjectMap> = self.objects.lock().await;
             let objects: Values<'_, ObjectId, Arc<Mutex<SpudObjectAsync>>> = objects.0.values();
-
-            drop(data);
 
             for object in objects {
                 object.lock().await.encode().await?;
