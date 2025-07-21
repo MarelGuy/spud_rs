@@ -53,7 +53,7 @@ mod tests {
             .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
                 let obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
-                obj.add_value("string", Decimal::from_f32_retain(0.1).unwrap())
+                obj.add_value("decimal", Decimal::from_f32_retain(0.1).unwrap())
                     .await?;
                 Ok(())
             })
