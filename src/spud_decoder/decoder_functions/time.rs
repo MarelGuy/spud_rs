@@ -22,7 +22,7 @@ mod tests {
         let builder = SpudBuilderSync::new();
 
         builder
-            .object(|obj| {
+            .object(|obj: &SpudObjectSync| {
                 obj.add_value("time", Time::new(12, 30, 45, 0).unwrap())?;
                 Ok(())
             })
