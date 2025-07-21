@@ -16,3 +16,66 @@ pub(crate) fn date_time(decoder: &mut DecoderObject) -> Result<Value, SpudError>
 
     Ok(Value::String(format!("{date} {time}")))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        types::{Date, DateTime, Time},
+        *,
+    };
+
+    #[cfg(feature = "sync")]
+    #[test]
+    fn test_date_time() {
+        let builder = SpudBuilderSync::new();
+
+        let date: Date = Date::new(2023, 3, 14).unwrap();
+        let time: Time = Time::new(12, 30, 45, 123456789).unwrap();
+
+        let date_time: DateTime = DateTime::new(date, time);
+
+        builder
+            .object(|obj| {
+                obj.add_value("date_time", date_time)?;
+                Ok(())
+            })
+            .unwrap();
+
+        let encoded_bytes: Vec<u8> = builder.encode().unwrap();
+
+        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+
+        decoder.decode(false, false).unwrap();
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_decimal_async() {
+        use std::sync::Arc;
+
+        use tokio::sync::{Mutex, MutexGuard};
+
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
+
+        let date: Date = Date::new(2023, 3, 14).unwrap();
+        let time: Time = Time::new(12, 30, 45, 123456789).unwrap();
+
+        let date_time: DateTime = DateTime::new(date, time);
+
+        builder
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
+
+                obj.add_value("date_time", date_time).await?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        let encoded_bytes: Vec<u8> = builder.encode().await.unwrap();
+
+        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+
+        decoder.decode(false, false).unwrap();
+    }
+}
