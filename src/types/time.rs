@@ -306,4 +306,23 @@ mod tests {
         assert_eq!(bytes[2], 45);
         assert_eq!(&bytes[3..], &500_000_000u32.to_le_bytes());
     }
+
+    #[test]
+    fn test_time_from_str_invalid_bytes() {
+        let time: Result<Time, _> = Time::from_str("256:30:45.500000");
+
+        assert!(time.is_err());
+
+        let time: Result<Time, _> = Time::from_str("12:256:45.500000");
+
+        assert!(time.is_err());
+
+        let time: Result<Time, _> = Time::from_str("12:30:256.500000");
+
+        assert!(time.is_err());
+
+        let time: Result<Time, _> = Time::from_str("12:30:45.4294967296");
+
+        assert!(time.is_err());
+    }
 }
