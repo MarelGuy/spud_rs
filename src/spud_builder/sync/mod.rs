@@ -4,7 +4,7 @@ mod object;
 pub use builder::SpudBuilderSync;
 pub use object::SpudObjectSync;
 
-#[cfg(all(test, not(feature = "async")))]
+#[cfg(all(test, feature = "sync"))]
 mod tests {
     use core::str::FromStr;
 

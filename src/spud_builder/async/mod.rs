@@ -577,4 +577,25 @@ mod tests {
         assert!(debug_str.contains("objects"));
         assert!(debug_str.contains("seen_ids"));
     }
+
+    #[tokio::test]
+    async fn test_spud_builder_encode_and_build() {
+        let mut builder: SpudBuilderAsync = SpudBuilderAsync::new();
+
+        builder
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
+
+                locked_object
+                    .add_value("test", SpudString::from("value"))
+                    .await?;
+
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        builder.encode().await.unwrap();
+        builder.build_file("./.tmp", "test").await.unwrap();
+    }
 }
