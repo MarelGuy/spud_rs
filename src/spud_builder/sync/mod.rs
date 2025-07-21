@@ -625,7 +625,7 @@ mod tests {
             .unwrap();
 
         builder.encode().unwrap();
-        builder.build_file("./.tmp", "sync_test").unwrap();
+        builder.build_file("./.tmp/spud", "sync_test").unwrap();
     }
 
     #[test]
@@ -648,7 +648,7 @@ mod tests {
 
         builder.encode().unwrap();
         builder
-            .build_file("./.tmp", "sync_test_with_objects")
+            .build_file("./.tmp/spud", "sync_test_with_objects")
             .unwrap();
     }
 }

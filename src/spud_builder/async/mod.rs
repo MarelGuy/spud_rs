@@ -732,7 +732,10 @@ mod tests {
             .unwrap();
 
         builder.encode().await.unwrap();
-        builder.build_file("./.tmp", "async_test").await.unwrap();
+        builder
+            .build_file("./.tmp/spud", "async_test")
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -770,7 +773,7 @@ mod tests {
 
         builder.encode().await.unwrap();
         builder
-            .build_file("./.tmp", "async_test_with_objects")
+            .build_file("./.tmp/spud", "async_test_with_objects")
             .await
             .unwrap();
     }
