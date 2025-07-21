@@ -79,3 +79,96 @@ impl fmt::Display for DateTime {
         write!(f, "{} {}", self.date, self.time)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_datetime_creation() {
+        let date: Date = Date::new(2023, 3, 15).unwrap();
+        let time: Time = Time::new(12, 30, 45, 500_000_000).unwrap();
+
+        let datetime = DateTime::new(date, time);
+
+        assert_eq!(datetime.date, date);
+        assert_eq!(datetime.time, time);
+    }
+
+    #[test]
+    fn test_datetime_from_naive_date() {
+        let naive_date: NaiveDate = NaiveDate::from_ymd_opt(2023, 3, 15).unwrap();
+        let naive_time: NaiveTime = NaiveTime::from_hms_nano_opt(12, 30, 45, 500_000_000).unwrap();
+        let naive_datetime: NaiveDateTime = NaiveDateTime::new(naive_date, naive_time);
+
+        let datetime: Result<DateTime, SpudError> = DateTime::try_from(naive_datetime);
+
+        assert!(datetime.is_ok());
+        assert_eq!(
+            datetime.unwrap().to_string(),
+            "2023-03-15 12:30:45.500000000"
+        );
+    }
+
+    #[test]
+    fn test_datetime_from_str() {
+        let datetime_str: &str = "2023-03-15 12:30:45.500000000";
+        let datetime: Result<DateTime, fmt::Error> = DateTime::from_str(datetime_str);
+
+        assert!(datetime.is_ok());
+        assert_eq!(datetime.unwrap().to_string(), datetime_str);
+    }
+
+    #[test]
+    fn test_datetime_from_str_invalid() {
+        let invalid_str: &str = "2023-13-15 12:30:45";
+        let datetime: Result<DateTime, fmt::Error> = DateTime::from_str(invalid_str);
+
+        assert!(datetime.is_err());
+
+        let invalid_str: &str = "2023-02-30 12:30:45";
+        let datetime: Result<DateTime, fmt::Error> = DateTime::from_str(invalid_str);
+
+        assert!(datetime.is_err());
+
+        let invalid_str: &str = "2023-03-15 25:00:00";
+        let datetime: Result<DateTime, fmt::Error> = DateTime::from_str(invalid_str);
+
+        assert!(datetime.is_err());
+
+        let invalid_str: &str = "2023-03-15 12:60:00";
+        let datetime: Result<DateTime, fmt::Error> = DateTime::from_str(invalid_str);
+
+        assert!(datetime.is_err());
+
+        let invalid_str: &str = "2023-03-15 12:30:60";
+        let datetime: Result<DateTime, fmt::Error> = DateTime::from_str(invalid_str);
+
+        assert!(datetime.is_err());
+
+        let invalid_str: &str = "2023-03-15 12:30:45.1000000000";
+        let datetime: Result<DateTime, fmt::Error> = DateTime::from_str(invalid_str);
+
+        assert!(datetime.is_err());
+
+        let invalid_str: &str = "2023-03-15 12:30";
+        let datetime: Result<DateTime, fmt::Error> = DateTime::from_str(invalid_str);
+
+        assert!(datetime.is_err());
+    }
+
+    #[test]
+    fn test_datetime_to_naive_date_time() {
+        let date: Date = Date::new(2023, 3, 15).unwrap();
+        let time: Time = Time::new(12, 30, 45, 500_000_000).unwrap();
+
+        let datetime = DateTime::new(date, time);
+        let naive_datetime: Result<NaiveDateTime, SpudError> = NaiveDateTime::try_from(datetime);
+
+        assert!(naive_datetime.is_ok());
+        assert_eq!(
+            naive_datetime.unwrap().to_string(),
+            "2023-03-15 12:30:45.500"
+        );
+    }
+}
