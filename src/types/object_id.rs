@@ -141,3 +141,87 @@ impl fmt::Debug for ObjectId {
         write!(f, "ObjectId({self})")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_object_id_creation() {
+        let id: ObjectId = ObjectId::new().expect("Failed to create ObjectId");
+
+        assert_eq!(id.as_bytes().len(), 10);
+        assert!(!id.to_string().is_empty());
+    }
+
+    #[test]
+    fn test_from_str() {
+        let id: ObjectId = ObjectId::new().expect("Failed to create ObjectId");
+        let id_str: String = id.to_string();
+        let parsed_id: ObjectId =
+            ObjectId::try_from(id_str.as_str()).expect("Failed to parse ObjectId");
+
+        assert_eq!(id, parsed_id);
+    }
+
+    #[test]
+    fn test_from_string() {
+        let id: ObjectId = ObjectId::new().expect("Failed to create ObjectId");
+        let id_str: String = id.to_string();
+        let parsed_id: ObjectId = ObjectId::try_from(id_str).expect("Failed to parse ObjectId");
+
+        assert_eq!(id, parsed_id);
+    }
+
+    #[test]
+    fn test_from_str_err() {
+        let invalid_str: &'static str = "invalid_base58_string";
+        let parsed_id: Result<ObjectId, SpudError> = ObjectId::try_from(invalid_str);
+
+        assert!(parsed_id.is_err());
+    }
+
+    #[test]
+    fn test_from_string_err() {
+        let invalid_str: String = "invalid_base58_string".into();
+        let parsed_id: Result<ObjectId, SpudError> = ObjectId::try_from(invalid_str);
+
+        assert!(parsed_id.is_err());
+    }
+
+    #[test]
+    fn test_from_bytes() {
+        let id: ObjectId = ObjectId::new().expect("Failed to create ObjectId");
+        let bytes: [u8; 10] = *id.as_bytes();
+        let from_bytes: ObjectId = ObjectId::from(bytes);
+
+        assert_eq!(id, from_bytes);
+    }
+
+    #[test]
+    fn test_try_from_spud_string() {
+        let id: ObjectId = ObjectId::new().expect("Failed to create ObjectId");
+        let spud_string: SpudString = SpudString::from(id.to_string());
+        let parsed_id: ObjectId =
+            ObjectId::try_from(spud_string).expect("Failed to parse ObjectId from SpudString");
+
+        assert_eq!(id, parsed_id);
+    }
+
+    #[test]
+    fn test_try_from_spud_string_err() {
+        let invalid_spud_string: SpudString = SpudString::from("invalid_base58_string");
+        let parsed_id: Result<ObjectId, SpudError> = ObjectId::try_from(invalid_spud_string);
+
+        assert!(parsed_id.is_err());
+    }
+
+    #[test]
+    fn test_debug_impl() {
+        let id: ObjectId = ObjectId::new().expect("Failed to create ObjectId");
+        let debug_str: String = format!("{id:?}");
+
+        assert!(debug_str.contains("ObjectId"));
+        assert!(debug_str.contains(&id.to_string()));
+    }
+}
