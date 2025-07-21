@@ -26,7 +26,15 @@ mod tests {
 
         builder
             .object(|obj: &SpudObjectSync| {
-                obj.add_value("string", SpudString::from("Hello, world!"))?;
+                obj.add_value("string_u8_len", SpudString::from("Hello, world!"))?;
+                obj.add_value(
+                    "string_u16_len",
+                    SpudString::from("x".repeat(u8::MAX as usize + 1)),
+                )?;
+                obj.add_value(
+                    "string_u32_len",
+                    SpudString::from("y".repeat(u16::MAX as usize + 1)),
+                )?;
                 Ok(())
             })
             .unwrap();
@@ -51,8 +59,18 @@ mod tests {
             .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
                 let obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
 
-                obj.add_value("string", SpudString::from("Hello, world!"))
+                obj.add_value("string_u8_len", SpudString::from("Hello, world!"))
                     .await?;
+                obj.add_value(
+                    "string_u16_len",
+                    SpudString::from("x".repeat(u8::MAX as usize + 1)),
+                )
+                .await?;
+                obj.add_value(
+                    "string_u32_len",
+                    SpudString::from("y".repeat(u16::MAX as usize + 1)),
+                )
+                .await?;
                 Ok(())
             })
             .await
