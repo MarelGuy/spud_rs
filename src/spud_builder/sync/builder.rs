@@ -146,7 +146,15 @@ impl SpudBuilderSync {
             object.lock().unwrap().encode()?;
         }
 
-        Ok(self.data.lock().unwrap().clone())
+        let header: Vec<u8> = initialise_header_sync(
+            &self.field_names.lock().unwrap(),
+            &self.data.lock().unwrap(),
+        );
+
+        self.data.lock().unwrap().clear();
+        self.data.lock().unwrap().extend_from_slice(&header);
+
+        Ok(header)
     }
 
     /// Builds the SPUD file at the specified path with the given file name.
@@ -172,12 +180,7 @@ impl SpudBuilderSync {
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> = initialise_header_sync(
-            &self.field_names.lock().unwrap(),
-            &self.data.lock().unwrap(),
-        );
-
-        fs::write(path, header)?;
+        fs::write(path, self.data.lock().unwrap().clone())?;
 
         Ok(())
     }

@@ -156,7 +156,13 @@ impl SpudBuilderAsync {
             object.lock().await.encode().await?;
         }
 
-        Ok(self.data.lock().await.clone())
+        let header: Vec<u8> =
+            initialise_header_async(&self.field_names.lock().await, &self.data.lock().await);
+
+        self.data.lock().await.clear();
+        self.data.lock().await.extend_from_slice(&header);
+
+        Ok(header)
     }
 
     /// Builds the SPUD file at the specified path with the given file name.
@@ -203,10 +209,7 @@ impl SpudBuilderAsync {
 
         let path: &Path = Path::new(&path_str);
 
-        let header: Vec<u8> =
-            initialise_header_async(&self.field_names.lock().await, &self.data.lock().await);
-
-        write(path, header).await?;
+        write(path, self.data.lock().await.clone()).await?;
 
         Ok(())
     }
