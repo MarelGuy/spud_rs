@@ -122,16 +122,43 @@ impl FromStr for Time {
 
         let hour: u8 = u8::from_str(parts[0])
             .map_err(|_| SpudError::ValidationError("Invalid hour".to_owned()))?;
+
         let minute: u8 = u8::from_str(parts[1])
             .map_err(|_| SpudError::ValidationError("Invalid minute".to_owned()))?;
+
         let second: u8 = u8::from_str(parts[2])
             .map_err(|_| SpudError::ValidationError("Invalid second".to_owned()))?;
+
         let nanosecond: u32 = if parts.len() > 3 {
             u32::from_str(parts[3])
                 .map_err(|_| SpudError::ValidationError("Invalid nanosecond".to_owned()))?
         } else {
             0
         };
+
+        if hour > 23 {
+            return Err(SpudError::ValidationError(
+                "Hour must be between 0 and 23".to_owned(),
+            ));
+        }
+
+        if minute > 59 {
+            return Err(SpudError::ValidationError(
+                "Minute must be between 0 and 59".to_owned(),
+            ));
+        }
+
+        if second > 59 {
+            return Err(SpudError::ValidationError(
+                "Second must be between 0 and 59".to_owned(),
+            ));
+        }
+
+        if nanosecond >= 1_000_000_000 {
+            return Err(SpudError::ValidationError(
+                "Nanosecond must be less than 1 billion".to_owned(),
+            ));
+        }
 
         Ok(Time {
             hour,
@@ -167,5 +194,104 @@ impl fmt::Display for Time {
                 self.hour, self.minute, self.second, self.nanosecond
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::NaiveDate;
+
+    use super::*;
+
+    #[test]
+    fn test_time_creation() {
+        let time: Time = Time::new(12, 30, 45, 500_000_000).unwrap();
+
+        assert_eq!(time.hour, 12);
+        assert_eq!(time.minute, 30);
+        assert_eq!(time.second, 45);
+        assert_eq!(time.nanosecond, 500_000_000);
+    }
+
+    #[test]
+    fn test_time_creation_invalid() {
+        assert!(Time::new(24, 0, 0, 0).is_err());
+        assert!(Time::new(23, 60, 0, 0).is_err());
+        assert!(Time::new(23, 59, 60, 0).is_err());
+        assert!(Time::new(23, 59, 59, 1_000_000_000).is_err());
+    }
+
+    #[test]
+    fn test_time_from_naive_time() {
+        let naive_time: NaiveTime = NaiveTime::from_hms_nano_opt(12, 30, 45, 500_000_000).unwrap();
+        let time: Time = naive_time.try_into().unwrap();
+
+        assert_eq!(time.hour, 12);
+        assert_eq!(time.minute, 30);
+        assert_eq!(time.second, 45);
+        assert_eq!(time.nanosecond, 500_000_000);
+    }
+
+    #[test]
+    fn test_time_from_naive_date_time() {
+        let naive_date: NaiveDate = NaiveDate::from_ymd_opt(2023, 3, 15).unwrap();
+        let naive_time: NaiveTime = NaiveTime::from_hms_nano_opt(12, 30, 45, 500_000_000).unwrap();
+
+        let naive_datetime: NaiveDateTime = NaiveDateTime::new(naive_date, naive_time);
+
+        let time: Time = naive_datetime.try_into().unwrap();
+
+        assert_eq!(time.hour, 12);
+        assert_eq!(time.minute, 30);
+        assert_eq!(time.second, 45);
+        assert_eq!(time.nanosecond, 500_000_000);
+    }
+
+    #[test]
+    fn test_time_to_naive_time() {
+        let time: Time = Time::new(12, 30, 45, 500_000_000).unwrap();
+        let naive_time: NaiveTime = time.try_into().unwrap();
+
+        assert_eq!(naive_time.hour(), 12);
+        assert_eq!(naive_time.minute(), 30);
+        assert_eq!(naive_time.second(), 45);
+        assert_eq!(naive_time.nanosecond(), 500_000_000);
+    }
+
+    #[test]
+    fn test_display_time() {
+        let time: Time = Time::new(12, 30, 45, 500_000_000).unwrap();
+
+        assert_eq!(time.to_string(), "12:30:45.500000000");
+
+        let time_no_ns: Time = Time::new(12, 30, 45, 0).unwrap();
+
+        assert_eq!(time_no_ns.to_string(), "12:30:45");
+    }
+
+    #[test]
+    fn test_parse_time() {
+        let time: Time = "12:30:45.500000000".parse().unwrap();
+
+        assert_eq!(time.hour, 12);
+        assert_eq!(time.minute, 30);
+        assert_eq!(time.second, 45);
+        assert_eq!(time.nanosecond, 500_000_000);
+
+        let time_no_ns: Time = "12:30:45".parse().unwrap();
+
+        assert_eq!(time_no_ns.hour, 12);
+        assert_eq!(time_no_ns.minute, 30);
+        assert_eq!(time_no_ns.second, 45);
+        assert_eq!(time_no_ns.nanosecond, 0);
+    }
+
+    #[test]
+    fn test_parse_invalid_time() {
+        assert!("25:00:00".parse::<Time>().is_err());
+        assert!("12:60:00".parse::<Time>().is_err());
+        assert!("12:30:60".parse::<Time>().is_err());
+        assert!("12:30:45.1000000000".parse::<Time>().is_err());
+        assert!("12:30".parse::<Time>().is_err());
     }
 }
