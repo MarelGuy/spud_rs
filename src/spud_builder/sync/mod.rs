@@ -611,6 +611,7 @@ mod tests {
         assert!(debug_str.contains("objects"));
         assert!(debug_str.contains("seen_ids"));
     }
+
     #[test]
     fn test_spud_builder_encode_and_build() {
         let mut builder: SpudBuilderSync = SpudBuilderSync::new();
@@ -624,6 +625,30 @@ mod tests {
             .unwrap();
 
         builder.encode().unwrap();
-        builder.build_file("./.tmp", "test").unwrap();
+        builder.build_file("./.tmp", "sync_test").unwrap();
+    }
+
+    #[test]
+    fn test_spud_builder_encode_and_build_with_objects() {
+        let mut builder: SpudBuilderSync = SpudBuilderSync::new();
+
+        builder
+            .object(|obj: &SpudObjectSync| {
+                obj.add_value("test_outside", SpudString::from("value_outside"))?;
+
+                obj.object("test_object", |inner_obj: &SpudObjectSync| {
+                    inner_obj.add_value("test_inside", SpudString::from("value_inside"))?;
+
+                    Ok(())
+                })?;
+
+                Ok(())
+            })
+            .unwrap();
+
+        builder.encode().unwrap();
+        builder
+            .build_file("./.tmp", "sync_test_with_objects")
+            .unwrap();
     }
 }

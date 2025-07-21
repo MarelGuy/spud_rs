@@ -732,6 +732,46 @@ mod tests {
             .unwrap();
 
         builder.encode().await.unwrap();
-        builder.build_file("./.tmp", "test").await.unwrap();
+        builder.build_file("./.tmp", "async_test").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_spud_builder_encode_and_build_with_objects() {
+        let mut builder: SpudBuilderAsync = SpudBuilderAsync::new();
+
+        builder
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let locked_object: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
+
+                locked_object
+                    .add_value("test_outside", SpudString::from("value_outside"))
+                    .await?;
+
+                locked_object
+                    .object(
+                        "test_object",
+                        async |inner_obj: Arc<Mutex<SpudObjectAsync>>| {
+                            let inner_locked_object: MutexGuard<'_, SpudObjectAsync> =
+                                inner_obj.lock().await;
+
+                            inner_locked_object
+                                .add_value("test_inside", SpudString::from("value_inside"))
+                                .await?;
+
+                            Ok(())
+                        },
+                    )
+                    .await?;
+
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        builder.encode().await.unwrap();
+        builder
+            .build_file("./.tmp", "async_test_with_objects")
+            .await
+            .unwrap();
     }
 }
