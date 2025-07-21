@@ -12,7 +12,7 @@ mod tests {
 
     #[cfg(feature = "sync")]
     #[test]
-    fn test_string() {
+    fn test_null() {
         let builder = SpudBuilderSync::new();
 
         builder
@@ -31,7 +31,7 @@ mod tests {
 
     #[cfg(feature = "async")]
     #[tokio::test]
-    async fn test_string_async() {
+    async fn test_null_async() {
         use std::sync::Arc;
 
         use tokio::sync::{Mutex, MutexGuard};
