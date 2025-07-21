@@ -30,7 +30,7 @@ mod tests {
         let builder = SpudBuilderSync::new();
 
         let date: Date = Date::new(2023, 3, 14).unwrap();
-        let time: Time = Time::new(12, 30, 45, 123456789).unwrap();
+        let time: Time = Time::new(12, 30, 45, 123_456_789).unwrap();
 
         let date_time: DateTime = DateTime::new(date, time);
 
@@ -50,7 +50,7 @@ mod tests {
 
     #[cfg(feature = "async")]
     #[tokio::test]
-    async fn test_decimal_async() {
+    async fn test_date_time_async() {
         use std::sync::Arc;
 
         use tokio::sync::{Mutex, MutexGuard};
@@ -58,7 +58,7 @@ mod tests {
         let builder: SpudBuilderAsync = SpudBuilderAsync::new();
 
         let date: Date = Date::new(2023, 3, 14).unwrap();
-        let time: Time = Time::new(12, 30, 45, 123456789).unwrap();
+        let time: Time = Time::new(12, 30, 45, 123_456_789).unwrap();
 
         let date_time: DateTime = DateTime::new(date, time);
 
