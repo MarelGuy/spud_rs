@@ -11,3 +11,30 @@ pub(crate) fn time(decoder: &mut DecoderObject) -> Result<Value, SpudError> {
 
     Ok(Value::String(time.to_string()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::*;
+
+    #[cfg(feature = "sync")]
+    #[test]
+    fn test_time() {
+        let builder = SpudBuilderSync::new();
+
+        builder
+            .object(|obj| {
+                obj.add_value("time", Time::new(12, 30, 45, 0).unwrap())?;
+                Ok(())
+            })
+            .unwrap();
+
+        let encoded_bytes: Vec<u8> = builder.encode().unwrap();
+
+        println!("Encoded bytes: {encoded_bytes:?}");
+
+        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+
+        decoder.decode(false, false).unwrap();
+    }
+}
