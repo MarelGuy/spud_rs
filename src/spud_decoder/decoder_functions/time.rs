@@ -31,7 +31,32 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().unwrap();
 
-        println!("Encoded bytes: {encoded_bytes:?}");
+        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+
+        decoder.decode(false, false).unwrap();
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_time_async() {
+        use std::sync::Arc;
+
+        use tokio::sync::{Mutex, MutexGuard};
+
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
+
+        builder
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
+
+                obj.add_value("time", Time::new(12, 30, 45, 0).unwrap())
+                    .await?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        let encoded_bytes: Vec<u8> = builder.encode().await.unwrap();
 
         let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
 
