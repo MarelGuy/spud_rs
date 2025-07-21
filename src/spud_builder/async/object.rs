@@ -110,17 +110,16 @@ impl SpudObjectAsync {
     /// # Panics
     ///
     /// Panics if the Mutex cannot be locked, which is unlikely but can happen in case of a deadlock or other synchronization issues.
-    pub async fn object<F>(&self, field_name: &str, f: F) -> Result<(), SpudError>
+    pub async fn object<F, Fut>(&self, field_name: &str, f: F) -> Result<(), SpudError>
     where
-        F: FnOnce(&SpudObjectAsync) -> Result<(), SpudError>,
+        F: FnOnce(Arc<Mutex<SpudObjectAsync>>) -> Fut,
+        Fut: Future<Output = Result<(), SpudError>>,
     {
         self.add_field_name(field_name).await?;
 
         let obj: Arc<Mutex<SpudObjectAsync>> = self.new_object().await?;
 
-        let locked_obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
-
-        f(&locked_obj)?;
+        f(obj).await?;
 
         Ok(())
     }
