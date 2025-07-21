@@ -42,6 +42,12 @@ impl<'a> From<&'a [u8]> for BinaryBlob<'a> {
     }
 }
 
+impl<'a, const L: usize> From<&'a [u8; L]> for BinaryBlob<'a> {
+    fn from(value: &'a [u8; L]) -> Self {
+        Self::new(value)
+    }
+}
+
 impl<'a> Deref for BinaryBlob<'a> {
     type Target = &'a [u8];
 
@@ -57,5 +63,64 @@ impl fmt::Display for BinaryBlob<'_> {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_binary_blob_creation() {
+        let data: &[u8; 4] = &[1, 2, 3, 4];
+        let blob: BinaryBlob<'_> = BinaryBlob::new(data);
+
+        assert_eq!(blob.bytes(), data);
+        assert_eq!(blob.len(), 4);
+        assert!(!blob.is_empty());
+    }
+
+    #[test]
+    fn test_binary_blob_to_vec() {
+        let data: &[u8; 4] = &[1, 2, 3, 4];
+        let blob: BinaryBlob<'_> = BinaryBlob::new(data);
+        let vec = blob.to_vec();
+
+        assert_eq!(vec, vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn test_binary_blob_display() {
+        let data: &[u8; 4] = &[1, 2, 3, 4];
+        let blob: BinaryBlob<'_> = BinaryBlob::new(data);
+        let display_string: String = format!("{blob}");
+
+        assert_eq!(display_string, "01020304");
+    }
+
+    #[test]
+    fn test_binary_blob_deref() {
+        let data: &[u8; 4] = &[1, 2, 3, 4];
+        let blob: BinaryBlob<'_> = BinaryBlob::new(data);
+
+        assert_eq!(&*blob, data);
+    }
+
+    #[test]
+    fn test_binary_blob_from_const_slice() {
+        let data: &[u8; 4] = &[1, 2, 3, 4];
+        let blob: BinaryBlob<'_> = BinaryBlob::from(data);
+
+        assert_eq!(blob.bytes(), data);
+        assert_eq!(blob.len(), 4);
+    }
+
+    #[test]
+    fn test_binary_blob_from_slice() {
+        let data: &[u8] = &[1, 2, 3, 4];
+        let blob: BinaryBlob<'_> = BinaryBlob::from(data);
+
+        assert_eq!(blob.bytes(), data);
+        assert_eq!(blob.len(), 4);
     }
 }
