@@ -51,7 +51,9 @@ impl SpudTypes {
             0x02 => Some(SpudTypes::FieldNameId),
             0x03 => Some(SpudTypes::Null),
             0x04 => Some(SpudTypes::Bool),
-            5_u8..=14_u8 => Some(SpudTypes::Number(SpudNumberTypes::from_u8(value).unwrap())),
+            5_u8..=14_u8 | 0x19 | 0x20 => {
+                Some(SpudTypes::Number(SpudNumberTypes::from_u8(value).unwrap()))
+            }
             0x0F => Some(SpudTypes::String),
             0x10 => Some(SpudTypes::ArrayStart),
             0x11 => Some(SpudTypes::ArrayEnd),

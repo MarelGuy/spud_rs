@@ -110,3 +110,75 @@ pub(crate) fn number(
 
     Ok(Value::Number(number))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[cfg(feature = "sync")]
+    #[test]
+    fn test_number() {
+        let builder = SpudBuilderSync::new();
+
+        builder
+            .object(|obj| {
+                obj.add_value("i8", 1i8)?;
+                obj.add_value("u8", 1u8)?;
+                obj.add_value("i16", 1i16)?;
+                obj.add_value("u16", 1u16)?;
+                obj.add_value("i32", 1i32)?;
+                obj.add_value("u32", 1u32)?;
+                obj.add_value("f32", 1.0f32)?;
+                obj.add_value("i64", 1i64)?;
+                obj.add_value("u64", 1u64)?;
+                obj.add_value("f64", 1.0f64)?;
+                obj.add_value("i128", 1i128)?;
+                obj.add_value("u128", 1u128)?;
+                Ok(())
+            })
+            .unwrap();
+
+        let encoded_bytes: Vec<u8> = builder.encode().unwrap();
+
+        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+
+        decoder.decode(false, false).unwrap();
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_number_async() {
+        use std::sync::Arc;
+
+        use tokio::sync::{Mutex, MutexGuard};
+
+        let builder: SpudBuilderAsync = SpudBuilderAsync::new();
+
+        builder
+            .object(async |obj: Arc<Mutex<SpudObjectAsync>>| {
+                let obj: MutexGuard<'_, SpudObjectAsync> = obj.lock().await;
+
+                obj.add_value("i8", 1i8).await?;
+                obj.add_value("u8", 1u8).await?;
+                obj.add_value("i16", 1i16).await?;
+                obj.add_value("u16", 1u16).await?;
+                obj.add_value("i32", 1i32).await?;
+                obj.add_value("u32", 1u32).await?;
+                obj.add_value("f32", 1.0f32).await?;
+                obj.add_value("i64", 1i64).await?;
+                obj.add_value("u64", 1u64).await?;
+                obj.add_value("f64", 1.0f64).await?;
+                obj.add_value("i128", 1i128).await?;
+                obj.add_value("u128", 1u128).await?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        let encoded_bytes: Vec<u8> = builder.encode().await.unwrap();
+
+        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+
+        decoder.decode(false, false).unwrap();
+    }
+}
