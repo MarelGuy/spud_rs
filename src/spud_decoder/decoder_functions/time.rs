@@ -14,8 +14,7 @@ pub(crate) fn time(decoder: &mut DecoderObject) -> Result<Value, SpudError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::*;
+    use crate::{types::Time, *};
 
     #[cfg(feature = "sync")]
     #[test]
