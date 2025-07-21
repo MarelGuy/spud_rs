@@ -188,6 +188,123 @@ mod tests {
     }
 
     #[test]
+    fn test_spud_builder_object_i8() {
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
+
+        builder
+            .object(|obj: &SpudObjectSync| {
+                obj.add_value("i8", -128i8)?;
+
+                Ok(())
+            })
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        assert_eq!(
+            data[data.len() - 2],
+            SpudTypes::Number(SpudNumberTypes::I8).as_u8()
+        );
+        assert_eq!(data[data.len() - 1], 0x80); // -128 in two's complement
+    }
+
+    #[test]
+    fn test_spud_builder_object_i16() {
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
+
+        builder
+            .object(|obj: &SpudObjectSync| {
+                obj.add_value("i16", -32768i16)?;
+
+                Ok(())
+            })
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        assert_eq!(
+            data[data.len() - 3],
+            SpudTypes::Number(SpudNumberTypes::I16).as_u8()
+        );
+        assert_eq!(&data[data.len() - 2..data.len()], [0x00, 0x80]); // -32768 in two's complement
+    }
+
+    #[test]
+    fn test_spud_builder_object_i32() {
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
+
+        builder
+            .object(|obj: &SpudObjectSync| {
+                obj.add_value("i32", -2_147_483_648_i32)?;
+
+                Ok(())
+            })
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        assert_eq!(
+            data[data.len() - 5],
+            SpudTypes::Number(SpudNumberTypes::I32).as_u8()
+        );
+        assert_eq!(&data[data.len() - 4..data.len()], [0x00, 0x00, 0x00, 0x80]); // -2147483648 in two's complement
+    }
+
+    #[test]
+    fn test_spud_builder_object_i64() {
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
+
+        builder
+            .object(|obj: &SpudObjectSync| {
+                obj.add_value("i64", -9_223_372_036_854_775_808_i64)?;
+
+                Ok(())
+            })
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        assert_eq!(
+            data[data.len() - 9],
+            SpudTypes::Number(SpudNumberTypes::I64).as_u8()
+        );
+        assert_eq!(
+            &data[data.len() - 8..data.len()],
+            [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80]
+        ); // -9223372036854775808 in two's complement
+    }
+
+    #[test]
+    fn test_spud_builder_object_i128() {
+        let builder: SpudBuilderSync = SpudBuilderSync::new();
+
+        builder
+            .object(|obj: &SpudObjectSync| {
+                obj.add_value(
+                    "i128",
+                    -170_141_183_460_469_231_731_687_303_715_884_105_728_i128,
+                )?;
+
+                Ok(())
+            })
+            .unwrap();
+
+        let data: MutexGuard<'_, Vec<u8>> = builder.data.lock().unwrap();
+
+        assert_eq!(
+            data[data.len() - 17],
+            SpudTypes::Number(SpudNumberTypes::I128).as_u8()
+        );
+        assert_eq!(
+            &data[data.len() - 16..data.len()],
+            [
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x80
+            ]
+        ); // -170141183460469231731687303715884105728 in two's complement
+    }
+
+    #[test]
     fn test_spud_builder_object_f32() {
         let builder: SpudBuilderSync = SpudBuilderSync::new();
 
@@ -493,5 +610,20 @@ mod tests {
         assert!(debug_str.contains("data"));
         assert!(debug_str.contains("objects"));
         assert!(debug_str.contains("seen_ids"));
+    }
+    #[test]
+    fn test_spud_builder_encode_and_build() {
+        let mut builder: SpudBuilderSync = SpudBuilderSync::new();
+
+        builder
+            .object(|obj: &SpudObjectSync| {
+                obj.add_value("test", SpudString::from("value"))?;
+
+                Ok(())
+            })
+            .unwrap();
+
+        builder.encode().unwrap();
+        builder.build_file("./.tmp", "test").unwrap();
     }
 }
