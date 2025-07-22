@@ -24,66 +24,40 @@ A `.spud` file consists of:
 
 ### Encoding (Writing a SPUD file)
 
-You can build SPUD files manually or by serializing Rust structs with `serde`.
+You can build SPUD files manually or (in the future) by serializing Rust structs with `serde`.
 
 #### Manual Usage
 
 ```rust
-```rust
 use spud::spud_builder::SpudBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut builder = SpudBuilder::new();
+    let mut builder: SpudBuilderSync = SpudBuilderSync::new();
 
-    builder.object(|obj| {
-        obj.field("name", "Example Object")?;
-        obj.field("version", 1u8)?;
-        obj.field("enabled", true)?;
-        obj.field("description", Option::<String>::None)?;
-        obj.field("value", 123.45f64)?;
-        obj.field("raw_data", vec![0x01, 0x02, 0x03, 0x04])?;
+    builder
+        .object(|obj: &SpudObjectSync| {
+            obj.add_value("email", SpudString::from("alice@example.com"))?;
 
-        Ok(())
-    })?;
+            obj.object("userdata", |f: &SpudObjectSync| {
+                f.add_value("name", SpudString::from("Alice"))?;
+                f.add_value("surname", SpudString::from("Smith"))?;
 
-    builder.build_file("output_dir", "my_spud_data")?;
+                Ok(())
+            })?;
+
+            obj.add_value("balance", Decimal::from_str_exact("1234.56").unwrap())?;
+
+            Ok(())
+        })
+        .unwrap();
 
     Ok(())
 }
 ```
 
-#### Serde Usage (TODO)
-
-```rust
-use spud::spud_builder::SpudBuilder;
-use serde::Serialize;
-
-#[derive(Serialize)]
-struct MyData {
-    name: String,
-    version: u8,
-    enabled: bool,
-    description: Option<String>,
-    value: f64,
-    raw_data: Vec<u8>,
-}
-
-let data = MyData {
-    name: "Example Object".to_string(),
-    version: 1,
-    enabled: true,
-    description: None,
-    value: 123.45,
-    raw_data: vec![0x01, 0x02, 0x03, 0x04],
-};
-
-let mut builder = SpudBuilder::from_serde(&data);
-builder.build_file("output_dir", "my_spud_data").unwrap();
-```
-
 ### Decoding (Reading a SPUD file)
 
-You can decode SPUD files manually or deserialize them into Rust structs with `serde`.
+You can decode SPUD files manually or (in the future) deserialize them into Rust structs with `serde`.
 
 #### Manual Usage
 
@@ -92,37 +66,15 @@ use spud::spud_decoder::SpudDecoder;
 
 let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud").unwrap();
 let data = decoder.decode().unwrap();
-println!("{:?}", data);
-```
 
-#### Serde Usage
-
-```rust
-use spud::spud_decoder::SpudDecoder;
-use serde::Deserialize;
-
-#[derive(Deserialize, Debug)]
-struct MyData {
-    name: String,
-    version: u8,
-    enabled: bool,
-    description: Option<String>,
-    value: f64,
-    raw_data: Vec<u8>,
-}
-
-let mut decoder = SpudDecoder::new_from_path("output_dir/my_spud_data.spud").unwrap();
-let data: MyData = decoder.deserialize().unwrap();
 println!("{:?}", data);
 ```
 
 ## Roadmap / TODO
 
 - Parallelism
-- Support for nested objects
 - `serde` integration for `SpudBuilder` and `SpudDecoder`
 - spud!{} macro
-- CLI tool for inspecting and converting `.spud` files
 
 ## Known Issues
 
