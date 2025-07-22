@@ -3,22 +3,29 @@ use std::path::Path;
 use indexmap::IndexMap;
 use serde_json::Value;
 
+#[cfg(feature = "async")]
 use tokio::{
     fs::{File as TokioFile, read as tokio_read},
     io::AsyncWriteExt,
 };
 
+#[cfg(feature = "sync")]
+use std::{
+    fs::{File as StdFile, read as std_read},
+    io::Write,
+};
+
 use crate::{SPUD_VERSION, SpudError, spud_decoder::DecoderObject, spud_types::SpudTypes};
 
-/// The `SpudDecoderAsync` is responsible for decoding SPUD files into a JSON format.
+/// The `SpudDecoder` is responsible for decoding SPUD files into a JSON format.
 #[derive(Default, Debug, Clone)]
-pub struct SpudDecoderAsync {
+pub struct SpudDecoder {
     file_contents: Vec<u8>,
     field_names: IndexMap<u8, String>,
     output_json: String,
 }
 
-impl SpudDecoderAsync {
+impl SpudDecoder {
     /// # Errors
     ///
     /// Returns an error if the file is not a valid spud file
@@ -134,44 +141,113 @@ impl SpudDecoderAsync {
 
     fn decode_objects(&mut self) -> Result<Vec<IndexMap<String, Value>>, SpudError> {
         let mut decoded_objects: Vec<IndexMap<String, Value>> = Vec::new();
+        let mut i: usize = 0;
 
-        let mut current_object: Vec<u8> = vec![];
-
-        let mut old_byte: u8 = 0;
-
-        for byte in &self.file_contents {
-            if *byte == SpudTypes::ObjectStart.as_u8() && old_byte == SpudTypes::ObjectStart.as_u8()
+        while i < self.file_contents.len() {
+            if self.file_contents.get(i) == Some(&SpudTypes::ObjectStart.as_u8())
+                && self.file_contents.get(i + 1) == Some(&SpudTypes::ObjectStart.as_u8())
             {
-                current_object.clear();
-            }
+                let start: usize = i;
 
-            if *byte == SpudTypes::ObjectEnd.as_u8() && old_byte == SpudTypes::ObjectEnd.as_u8() {
-                let last: u8 = current_object[current_object.len() - 1];
-                let first: u8 = current_object[0];
+                let mut depth: i32 = 0;
+                let mut end: usize = 0;
+                let mut j: usize = i;
 
-                if first != SpudTypes::ObjectStart.as_u8() || last != SpudTypes::ObjectEnd.as_u8() {
-                    return Err(SpudError::DecodingError(format!(
-                        "Invalid SPUD file: object start or end byte mismatch: {first}, {last}"
-                    )));
+                while let Some(&byte) = self.file_contents.get(j) {
+                    if byte == SpudTypes::ObjectStart.as_u8()
+                        && self.file_contents.get(j + 1) == Some(&SpudTypes::ObjectStart.as_u8())
+                    {
+                        depth += 1;
+                        j += 1;
+                    } else if byte == SpudTypes::ObjectEnd.as_u8()
+                        && self.file_contents.get(j + 1) == Some(&SpudTypes::ObjectEnd.as_u8())
+                    {
+                        depth -= 1;
+                        j += 1;
+
+                        if depth == 0 {
+                            end = j + 1;
+
+                            break;
+                        }
+                    }
+
+                    j += 1;
                 }
 
-                let mut object: DecoderObject<'_> =
-                    DecoderObject::new(&current_object, &self.field_names);
+                if end > start {
+                    let object_bytes: &[u8] = &self.file_contents[start..end];
 
-                decoded_objects.push(object.decode()?);
+                    let mut decoder: DecoderObject<'_> =
+                        DecoderObject::new(object_bytes, &self.field_names);
+
+                    decoded_objects.push(decoder.decode()?);
+
+                    i = end;
+                } else {
+                    i += 1;
+                }
             } else {
-                current_object.push(*byte);
+                i += 1;
             }
-
-            old_byte = *byte;
         }
 
         Ok(decoded_objects)
     }
 }
 
-impl SpudDecoderAsync {
-    /// Creates a new `SpudDecoderAsync` instance from a file at the specified path.
+#[cfg(feature = "sync")]
+impl SpudDecoder {
+    /// Creates a new `SpudDecoder` instance from a file at the specified path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the file to read.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the path is invalid
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if the path is invalid
+    ///
+    /// # Notes
+    ///
+    /// There is an async version of this function available if the `async` feature is enabled.
+    pub fn new_from_path(path: &str) -> Result<Self, SpudError> {
+        let file: Vec<u8> = std_read(path)?;
+
+        Self::new(&file)
+    }
+
+    /// Builds a JSON file at the specified path with the given file name.
+    ///  # Arguments
+    ///
+    /// * `path_str` - The path to the directory where the file will be created.
+    /// * `file_name` - The name of the file to create.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the file has errors being written
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if the file has errors being written
+    ///
+    /// # Notes
+    ///
+    /// There is an async version of this function available if the `async` feature is enabled.
+    pub fn build_file(&self, path: &str) -> Result<(), SpudError> {
+        StdFile::create(Path::new(path))?.write_all(self.output_json.as_bytes())?;
+
+        Ok(())
+    }
+}
+
+#[cfg(feature = "async")]
+impl SpudDecoder {
+    /// Creates a new `SpudDecoder` instance from a file at the specified path.
     ///
     /// # Arguments
     ///
@@ -180,7 +256,7 @@ impl SpudDecoderAsync {
     /// # Errors
     ///
     /// Will return an error if the path is invalid
-    pub async fn new_from_path(path: &str) -> Result<Self, SpudError> {
+    pub async fn new_from_path_async(path: &str) -> Result<Self, SpudError> {
         let file: Vec<u8> = tokio_read(path).await?;
 
         Self::new(&file)
@@ -195,7 +271,7 @@ impl SpudDecoderAsync {
     /// # Errors
     ///
     /// Will return an error if the file has errors being written
-    pub async fn build_file(&self, path: &str) -> Result<(), SpudError> {
+    pub async fn build_file_async(&self, path: &str) -> Result<(), SpudError> {
         TokioFile::create(Path::new(path))
             .await?
             .write_all(self.output_json.as_bytes())

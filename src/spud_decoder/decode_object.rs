@@ -36,7 +36,7 @@ impl<'a> DecoderObject<'a> {
     pub(crate) fn decode(&mut self) -> Result<IndexMap<String, Value>, SpudError> {
         let mut object: IndexMap<String, Value> = IndexMap::new();
 
-        self.next(1)?;
+        self.next(2)?;
 
         let id: &[u8] = self.read_bytes(10)?;
 
@@ -44,7 +44,9 @@ impl<'a> DecoderObject<'a> {
         object.insert("oid".to_string(), Value::String(object_id));
 
         while self.index < self.contents.len() {
-            if self.current_byte == SpudTypes::ObjectEnd.as_u8() {
+            if self.contents.get(self.index) == Some(&SpudTypes::ObjectEnd.as_u8())
+                && self.contents.get(self.index + 1) == Some(&SpudTypes::ObjectEnd.as_u8())
+            {
                 break;
             }
 

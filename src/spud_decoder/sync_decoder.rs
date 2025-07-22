@@ -5,21 +5,21 @@ use indexmap::IndexMap;
 use serde_json::Value;
 
 use std::{
-    fs::{read as std_read, File as StdFile},
+    fs::{File as StdFile, read as std_read},
     io::Write,
 };
 
-use crate::{spud_decoder::DecoderObject, spud_types::SpudTypes, SpudError, SPUD_VERSION};
+use crate::{SPUD_VERSION, SpudError, spud_decoder::DecoderObject, spud_types::SpudTypes};
 
-/// The `SpudDecoderSync` is responsible for decoding SPUD files into a JSON format.
+/// The `SpudDecoder` is responsible for decoding SPUD files into a JSON format.
 #[derive(Default, Debug, Clone)]
-pub struct SpudDecoderSync {
+pub struct SpudDecoder {
     file_contents: Vec<u8>,
     field_names: IndexMap<u8, String>,
     output_json: String,
 }
 
-impl SpudDecoderSync {
+impl SpudDecoder {
     /// # Errors
     ///
     /// Returns an error if the file is not a valid spud file
@@ -135,44 +135,63 @@ impl SpudDecoderSync {
 
     fn decode_objects(&mut self) -> Result<Vec<IndexMap<String, Value>>, SpudError> {
         let mut decoded_objects: Vec<IndexMap<String, Value>> = Vec::new();
+        let mut i: usize = 0;
 
-        let mut current_object: Vec<u8> = vec![];
-
-        let mut old_byte: u8 = 0;
-
-        for byte in &self.file_contents {
-            if *byte == SpudTypes::ObjectStart.as_u8() && old_byte == SpudTypes::ObjectStart.as_u8()
+        while i < self.file_contents.len() {
+            if self.file_contents.get(i) == Some(&SpudTypes::ObjectStart.as_u8())
+                && self.file_contents.get(i + 1) == Some(&SpudTypes::ObjectStart.as_u8())
             {
-                current_object.clear();
-            }
+                let start: usize = i;
 
-            if *byte == SpudTypes::ObjectEnd.as_u8() && old_byte == SpudTypes::ObjectEnd.as_u8() {
-                let last: u8 = current_object[current_object.len() - 1];
-                let first: u8 = current_object[0];
+                let mut depth: i32 = 0;
+                let mut end: usize = 0;
+                let mut j: usize = i;
 
-                if first != SpudTypes::ObjectStart.as_u8() || last != SpudTypes::ObjectEnd.as_u8() {
-                    return Err(SpudError::DecodingError(format!(
-                        "Invalid SPUD file: object start or end byte mismatch: {first}, {last}"
-                    )));
+                while let Some(&byte) = self.file_contents.get(j) {
+                    if byte == SpudTypes::ObjectStart.as_u8()
+                        && self.file_contents.get(j + 1) == Some(&SpudTypes::ObjectStart.as_u8())
+                    {
+                        depth += 1;
+                        j += 1;
+                    } else if byte == SpudTypes::ObjectEnd.as_u8()
+                        && self.file_contents.get(j + 1) == Some(&SpudTypes::ObjectEnd.as_u8())
+                    {
+                        depth -= 1;
+                        j += 1;
+
+                        if depth == 0 {
+                            end = j + 1;
+
+                            break;
+                        }
+                    }
+
+                    j += 1;
                 }
 
-                let mut object: DecoderObject<'_> =
-                    DecoderObject::new(&current_object, &self.field_names);
+                if end > start {
+                    let object_bytes: &[u8] = &self.file_contents[start..end];
 
-                decoded_objects.push(object.decode()?);
+                    let mut decoder: DecoderObject<'_> =
+                        DecoderObject::new(object_bytes, &self.field_names);
+
+                    decoded_objects.push(decoder.decode()?);
+
+                    i = end;
+                } else {
+                    i += 1;
+                }
             } else {
-                current_object.push(*byte);
+                i += 1;
             }
-
-            old_byte = *byte;
         }
 
         Ok(decoded_objects)
     }
 }
 
-impl SpudDecoderSync {
-    /// Creates a new `SpudDecoderSync` instance from a file at the specified path.
+impl SpudDecoder {
+    /// Creates a new `SpudDecoder` instance from a file at the specified path.
     ///
     /// # Arguments
     ///

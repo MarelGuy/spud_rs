@@ -140,7 +140,7 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().unwrap();
 
-        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+        let mut decoder: SpudDecoder = SpudDecoder::new(&encoded_bytes).unwrap();
 
         decoder.decode(false, false).unwrap();
     }
@@ -177,7 +177,7 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().await.unwrap();
 
-        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+        let mut decoder: SpudDecoder = SpudDecoder::new(&encoded_bytes).unwrap();
 
         decoder.decode(false, false).unwrap();
     }

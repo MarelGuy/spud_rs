@@ -6,16 +6,20 @@ pub(crate) fn object_start(
     decoder: &mut DecoderObject,
     next_steps: &mut usize,
 ) -> Result<Value, SpudError> {
-    decoder.next(1)?;
+    decoder.next(2)?;
 
     let mut output_object: Map<String, Value> = Map::new();
+
+    let id_bytes: &[u8] = decoder.read_bytes(10)?;
+    let object_id: String = bs58::encode(id_bytes).into_string();
+    output_object.insert("oid".to_string(), Value::String(object_id));
 
     let parent_field: String = decoder.current_field.clone();
 
     loop {
-        let byte: Option<SpudTypes> = SpudTypes::from_u8(decoder.contents[decoder.index]);
-
-        if byte == Some(SpudTypes::ObjectEnd) {
+        if decoder.contents.get(decoder.index) == Some(&SpudTypes::ObjectEnd.as_u8())
+            && decoder.contents.get(decoder.index + 1) == Some(&SpudTypes::ObjectEnd.as_u8())
+        {
             break;
         }
 
@@ -26,7 +30,7 @@ pub(crate) fn object_start(
         }
     }
 
-    *next_steps = 1;
+    *next_steps = 2;
 
     decoder.current_field = parent_field;
 
@@ -51,7 +55,7 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().unwrap();
 
-        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+        let mut decoder: SpudDecoder = SpudDecoder::new(&encoded_bytes).unwrap();
 
         decoder.decode(false, false).unwrap();
     }
@@ -77,7 +81,7 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().await.unwrap();
 
-        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+        let mut decoder: SpudDecoder = SpudDecoder::new(&encoded_bytes).unwrap();
 
         decoder.decode(false, false).unwrap();
     }
@@ -103,7 +107,7 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().unwrap();
 
-        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+        let mut decoder: SpudDecoder = SpudDecoder::new(&encoded_bytes).unwrap();
 
         decoder.decode(false, false).unwrap();
     }
@@ -139,7 +143,7 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().await.unwrap();
 
-        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+        let mut decoder: SpudDecoder = SpudDecoder::new(&encoded_bytes).unwrap();
 
         decoder.decode(false, false).unwrap();
     }
@@ -164,7 +168,7 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().unwrap();
 
-        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+        let mut decoder: SpudDecoder = SpudDecoder::new(&encoded_bytes).unwrap();
 
         decoder.decode(false, false).unwrap();
     }
@@ -199,7 +203,7 @@ mod tests {
 
         let encoded_bytes: Vec<u8> = builder.encode().await.unwrap();
 
-        let mut decoder: SpudDecoderSync = SpudDecoderSync::new(&encoded_bytes).unwrap();
+        let mut decoder: SpudDecoder = SpudDecoder::new(&encoded_bytes).unwrap();
 
         decoder.decode(false, false).unwrap();
     }
